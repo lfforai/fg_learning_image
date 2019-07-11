@@ -81,7 +81,7 @@
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <CudaCompile Include="kernel.cu" />
+    <CudaCompile Include="image_scale.cu" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="..\..\..\..\Desktop\lena.jpg" />

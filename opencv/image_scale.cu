@@ -152,7 +152,7 @@ __global__ void cos_sin_sum(float *y, float* A_cos, float* A_sin, int x_end, flo
 		}
 	}
 }
-
+#//""
 //生成一组随机数
 //float* round_gpu(size_t n = 10, float mean = 5.0, float std = 618.0) {
 //
