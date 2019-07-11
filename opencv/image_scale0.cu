@@ -1,4 +1,3 @@
-
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
 #include <opencv2/opencv.hpp>
@@ -197,7 +196,7 @@ int main()
 
 	cvtColor(Lena1, Lena1, COLOR_BGR2BGRA);//
 	cvtColor(Lena1, Lena1, COLOR_BGRA2GRAY);//
-	imshow("ԭͼ",Lena);
+	imshow("ԭͼ", Lena);
 	waitKey(0);
 
 	int imgWidth_src = Lena.cols;//ԭͼ���

@@ -81,10 +81,13 @@
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <CudaCompile Include="image_scale.cu" />
+    <CudaCompile Include="image_scale1.cu" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="..\..\..\..\Desktop\lena.jpg" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="image_scale0.cu" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
