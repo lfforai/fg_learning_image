@@ -9,6 +9,7 @@
 #include <device_launch_parameters.h>
 #include <sstream>
 #include <curand.h>
+#include <cufft.h> 
 
 using namespace std;
 using namespace cv;
@@ -424,7 +425,6 @@ Mat RCDeletion(const char* path ,Mat lena_o, float x_rato = 2.0, float y_rato = 
 }
 
 //五、平滑线性平滑线性滤波器，
-
 //有路径时候优先文件路径导入mat，没路径时候输入mat
 texture <uchar, cudaTextureType2D, cudaReadModeElementType> refTex_filter_N;//用于计算RCDeletion
 cudaArray* cuArray_filter_N;//用于计算RCDeletion
@@ -537,6 +537,7 @@ Mat filter_N(const char* path, Mat lena_o,int mode=0,int ifhd=0) {
 	return dstImg1.clone();
 }
 
+
 int main()
 {   //未对原图进行滤波处理
 	Mat input= imread("C:/Users/Administrator/Desktop/lena.jpg");
@@ -552,6 +553,6 @@ int main()
 	Mat mat_sx1 = RCDeletion("", input1, 0.5, 0.5,1);//缩小=欠采样
 	mat_sx1 = RCDeletion("", mat_sx1, 2, 2,1);//将缩小后的图还原回去
 	imshow("有滤波还原图：", mat_sx1);
-	waitKey(0);
+	cout<<"----------------------------------"<<endl;
 	return 0;
 }
