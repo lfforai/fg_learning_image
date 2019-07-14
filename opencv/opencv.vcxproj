@@ -90,6 +90,15 @@
     <Image Include="..\..\..\..\Desktop\lena.jpg" />
     <Image Include="..\..\..\..\Desktop\I.png" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="cudatool.cuh" />
+    <ClInclude Include="cufft.cuh" />
+    <ClInclude Include="image_scale.cuh" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="cudatool.cu" />
+    <ClCompile Include="mian.cpp" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
     <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 10.0.targets" />

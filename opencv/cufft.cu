@@ -1,24 +1,11 @@
-#include "cuda_runtime.h"
-#include "device_launch_parameters.h"
-#include <opencv2/opencv.hpp>
-#include <iostream>
-#include <string>
-#include <cuda.h>
-#include <cuda_runtime.h>
-#include "math.h"
-#include <device_launch_parameters.h>
-#include <sstream>
-#include <curand.h>
-#include "cufft.h"
-#include "math.h"
-
+#include "cufft.cuh"
 
 //利用cuda自带cufft模块 实现图像的傅里叶变换
 using namespace std;
 using namespace cv;
 
 //mode=0普通频谱，mode=1中心化频谱，mode=2中心化后对数化
-void cufft(char* path = "C:/Users/Administrator/Desktop/tt.jpg",int mode=0) {
+void cufft(char* path,int mode) {
 	Mat Lena = imread(path);
 	cvtColor(Lena, Lena, COLOR_BGR2GRAY);//转换为灰度图
 
@@ -171,17 +158,15 @@ void cufft(char* path = "C:/Users/Administrator/Desktop/tt.jpg",int mode=0) {
 
 	cufftDestroy(plan);
 	cudaFree(data);
-
 }
 
-int main()
-{   char *path = "C:/Users/Administrator/Desktop/I.png";
+void cuffttest(char *path){
+	//char *path = "C:/Users/Administrator/Desktop/I.png";
 	Mat Lena = imread(path);
 	cvtColor(Lena, Lena, COLOR_BGR2GRAY);//转换为灰度图
-   	imshow("原图：", Lena);
-	cufft(path,0);//原始频率图
-	cufft(path,1);//中心化
-	cufft(path,2);//对数化
+	imshow("原图：", Lena);
+	cufft(path, 0);//原始频率图
+	cufft(path, 1);//中心化
+	cufft(path, 2);//对数化
 	waitKey(0);
-	return 0;
 }

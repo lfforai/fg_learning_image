@@ -2,11 +2,48 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Image Include="..\..\..\..\Desktop\lena.jpg" />
+    <Image Include="..\..\..\..\Desktop\I.png" />
   </ItemGroup>
   <ItemGroup>
-    <CudaCompile Include="cufft.cu" />
-    <CudaCompile Include="image_scale0.cu" />
-    <CudaCompile Include="image_scale1.cu" />
-    <CudaCompile Include="image_scale2.cu" />
+    <Filter Include="cufft">
+      <UniqueIdentifier>{482919ab-9ec8-407c-8d3f-4cda30583e73}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="image_scale">
+      <UniqueIdentifier>{c5e7cf31-5ff0-495f-b6eb-b3bf65dcd6e6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="cudatool">
+      <UniqueIdentifier>{ca9c2fe6-7360-4b10-8ae2-9b44f13b2665}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <CudaCompile Include="cufft.cu">
+      <Filter>cufft</Filter>
+    </CudaCompile>
+    <CudaCompile Include="image_scale0.cu">
+      <Filter>image_scale</Filter>
+    </CudaCompile>
+    <CudaCompile Include="image_scale1.cu">
+      <Filter>image_scale</Filter>
+    </CudaCompile>
+    <CudaCompile Include="image_scale2.cu">
+      <Filter>image_scale</Filter>
+    </CudaCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="cufft.cuh">
+      <Filter>cufft</Filter>
+    </ClInclude>
+    <ClInclude Include="image_scale.cuh">
+      <Filter>image_scale</Filter>
+    </ClInclude>
+    <ClInclude Include="cudatool.cuh">
+      <Filter>cudatool</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="mian.cpp" />
+    <ClCompile Include="cudatool.cu">
+      <Filter>cudatool</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>
