@@ -17,6 +17,9 @@
     <Filter Include="rotate">
       <UniqueIdentifier>{d0d3ad30-2c0d-415c-bb20-f4d35931da11}</UniqueIdentifier>
     </Filter>
+    <Filter Include="opencv">
+      <UniqueIdentifier>{41d92a1c-b226-4130-a6f3-8c4f42c5d5f1}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="cufft.cu">
@@ -51,6 +54,9 @@
     <ClInclude Include="image_rotate.cuh">
       <Filter>rotate</Filter>
     </ClInclude>
+    <ClInclude Include="opencv_DFT.h">
+      <Filter>opencv</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="mian.cpp" />
@@ -59,6 +65,9 @@
     </ClCompile>
     <ClCompile Include="math_cuda.cu">
       <Filter>cudatool</Filter>
+    </ClCompile>
+    <ClCompile Include="opencv_DFT.cpp">
+      <Filter>opencv</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

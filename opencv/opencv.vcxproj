@@ -88,8 +88,8 @@
     <CudaCompile Include="image_scale2.cu" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="..\..\..\..\Desktop\lena.jpg" />
     <Image Include="..\..\..\..\Desktop\I.png" />
+    <Image Include="..\..\..\..\Desktop\lena.jpg" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="cudatool.cuh" />
@@ -97,11 +97,13 @@
     <ClInclude Include="image_rotate.cuh" />
     <ClInclude Include="image_scale.cuh" />
     <ClInclude Include="math_cuda.cuh" />
+    <ClInclude Include="opencv_DFT.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="cudatool.cu" />
     <ClCompile Include="math_cuda.cu" />
     <ClCompile Include="mian.cpp" />
+    <ClCompile Include="opencv_DFT.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -1,6 +1,8 @@
-#include "cufft.cuh"        //����Ҷ�˲�ʽ��
-#include "image_scale.cuh"  //ͼ������ʵ��
-//ϵͳ��
+﻿#include "cufft.cuh"        //傅里叶滤波式样
+#include "image_scale.cuh"  //图形缩放实验
+#include "opencv_DFT.h"
+
+//系统包
 #include <opencv2/opencv.hpp>
 #include <iostream>
 #include <string>
@@ -9,23 +11,70 @@
 
 using namespace std;
 using namespace cv;
+
 using namespace image_scale0;
 using namespace image_scale1;
 using namespace image_scale2;
 
-int main()
+//一、图像放缩实验
+void graph_scale_test()
 {
-	//image_scale0::image_scale0();
-	//image_scale1::image_scale1();
-	//image_scale2::image_scale2();
-	//cuffttest("C:/Users/Administrator/Desktop/I.png");
+	image_scale0::image_scale0();
+	image_scale1::image_scale1();
+	image_scale2::image_scale2();
+}
 
-	//��ѧʵ��
-	//atan_cpu_test();
-	//cufft_math_test("C:/Users/Administrator/Desktop/I.png",0);
+//二、傅里叶实验
+void cuttf_test() {
+	cuffttest("C:/Users/Administrator/Desktop/I.png");
+}
 
-	Mat lena=image_rotate_point_GPU("C:/Users/Administrator/Desktop/I.png",Mat::ones(2,2,0),0);
+//三、频谱_相谱实验
+void fre_angel_graph_test() {
+	//原始图
+	Mat lena1 = imread("C:/Users/Administrator/Desktop/I.png");
+	cufftComplex* data1 = cufft_fun("", lena1, 0, 1, 0, 1);
+	Mat output1 = fre_spectrum(data1, lena1.cols, lena1.rows, 1);
+	imshow("fg的log频谱图：", output1);
+
+	Mat  angle_mat = angle_spectrum(data1, lena1.cols, lena1.rows);
+	imshow("fg的log相谱图：", angle_mat);
+	cudaFree(data1);
+
+	//图像旋转
+	Mat lena = image_rotate_point_GPU("C:/Users/Administrator/Desktop/I.png", Mat::ones(2, 2, 0), 0);
+	imshow("fg的旋转图：", lena);
+
+	cufftComplex* data_rotate = cufft_fun("", lena, 0, 1, 0, 0);
+	Mat fre_rotate_mat = fre_spectrum(data_rotate, lena.cols, lena.rows, 1);
+	imshow("fg的log旋转的频谱图：", fre_rotate_mat);
+
+	Mat  angle_rotate_mat = angle_spectrum(data_rotate, lena1.cols, lena1.rows);
+	imshow("fg的log旋转的相谱图：", angle_rotate_mat);
+	cudaFree(data_rotate);
+
+	//坐标平移
+	Mat lena_move = image_move_point_GPU("C:/Users/Administrator/Desktop/I.png", Mat::ones(2, 2, 0), 0, 140, -50);
+	imshow("fg的坐标点移动图：", lena_move);
+
+	cufftComplex* data_move = cufft_fun("", lena_move, 0, 1, 0, 0);
+	Mat  fre_move_mat = fre_spectrum(data_move, lena.cols, lena.rows, 1);
+	imshow("fg的log平移后的频谱图：", fre_move_mat);
+
+	Mat  angle_move_mat = angle_spectrum(data_move, lena1.cols, lena1.rows);
+	imshow("fg的log平移后的相谱图：", angle_move_mat);
+	cudaFree(data_move);
 	
+
+	//全opencv版本
+	opencv_DFT();
 	waitKey(0);
+}
+
+
+int main()
+{    
+	fre_angel_graph_test();
+   
 }
 

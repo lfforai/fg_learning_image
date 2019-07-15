@@ -20,4 +20,5 @@ void cuffttest(char *path);
 
 //Õ®”√À„◊”
 extern "C" Mat fre_spectrum(cufftComplex* data, int NX, int NY, int mode);
-extern "C" cufftComplex* cufft_fun(char* path, int mode = 0, int m_mode = 0, int MN = 0);
+extern "C" cufftComplex* cufft_fun(const char* path, Mat Lena_o, int mode = 0, int m_mode = 0, int MN = 0,int ifgray=0);
+extern "C" Mat angle_spectrum(cufftComplex* data, int NX, int NY);

@@ -172,10 +172,16 @@ void cuffttest(char *path){
 //通用傅里叶包
 //mode=0:傅里叶正变换,mode=1:傅里叶逆变换
 //m_mode=0：普通化，m_mode=1，中心化
-//如果是Ｆ（ｕ，ｖ）转换为ｆ（ｘ，ｙ），需要对反傅里叶*1/MN，MN=1为需要
-cufftComplex* cufft_fun(char* path, int mode,int m_mode,int MN) {
-	Mat Lena = imread(path);
-	cvtColor(Lena, Lena, COLOR_BGR2GRAY);//转换为灰度图
+//如果是Ｆ（ｕ，ｖ）转换为ｆ（ｘ，ｙ），需要对反傅里叶*1/MN，MN=1为需要,ifgray是否需要灰度化
+cufftComplex* cufft_fun(const char* path,Mat Lena_o,int mode,int m_mode,int MN,int ifgray) {
+	Mat Lena;
+	if (strlen(path)== 0)
+	   Lena=Lena_o.clone();
+	else
+	   Lena = imread(path);
+
+	if (ifgray==1)
+	   cvtColor(Lena, Lena, COLOR_BGR2GRAY);//转换为灰度图
 
 	int imgWidth_src = Lena.cols;//原图像宽 x
 	int imgHeight_src = Lena.rows;//原图像高 y
@@ -183,6 +189,7 @@ cufftComplex* cufft_fun(char* path, int mode,int m_mode,int MN) {
 	int NX = Lena.cols;
 	int NY = Lena.rows;
 	int length = NX * NY;
+	cout<<NX<<","<<NY<<endl;
 
 	int  BATCH = 1;
 	int  NRANK = 2;
@@ -191,7 +198,11 @@ cufftComplex* cufft_fun(char* path, int mode,int m_mode,int MN) {
 	cufftComplex *data;
 
 	int n[2] = { NX, NY };
-	cudaMallocManaged((void**)&data, sizeof(cufftComplex)*NX*NY*BATCH);
+	cudaMallocManaged((void**)&data, sizeof(cufftComplex)*NX*NY);
+	
+	if (cudaGetLastError() != cudaSuccess) {
+		fprintf(stderr, "Cuda error: Failed to allocate\n");
+	}
 
 	//把图像元素赋值给赋值给实数部分
 	for (int i = 0; i < NY; i++)
@@ -210,10 +221,6 @@ cufftComplex* cufft_fun(char* path, int mode,int m_mode,int MN) {
 		}
 	}
 
-	if (cudaGetLastError() != cudaSuccess) {
-		fprintf(stderr, "Cuda error: Failed to allocate\n");
-	}
-
 	/* Create a 2D FFT plan. */
 	if (cufftPlanMany(&plan, NRANK, n,
 		NULL, 1, NX*NY, // *inembed, istride, idist
@@ -222,10 +229,15 @@ cufftComplex* cufft_fun(char* path, int mode,int m_mode,int MN) {
 		fprintf(stderr, "CUFFT error: Plan creation failed");
 	}
 
+
 	if (mode == 0) //傅里叶变换
 	{   /* Use the CUFFT plan to transform the signal in place. */
 		if (cufftExecC2C(plan, data, data, CUFFT_FORWARD) != CUFFT_SUCCESS) {
 			fprintf(stderr, "CUFFT error: ExecC2C Forward failed");
+		}
+
+		if (cudaDeviceSynchronize() != cudaSuccess) {
+			fprintf(stderr, "Cuda error: Failed to synchronize\n");
 		}
 	}
 	else 
@@ -233,7 +245,11 @@ cufftComplex* cufft_fun(char* path, int mode,int m_mode,int MN) {
 		if (cufftExecC2C(plan, data, data, CUFFT_INVERSE) != CUFFT_SUCCESS) {
 			fprintf(stderr, "CUFFT error: ExecC2C Forward failed");
 		}
-		
+
+		if (cudaDeviceSynchronize() != cudaSuccess) {
+			fprintf(stderr, "Cuda error: Failed to synchronize\n");
+		}
+
 		if (MN==1)
 		{
 			for (int i = 0; i < NY; i++)
@@ -245,10 +261,6 @@ cufftComplex* cufft_fun(char* path, int mode,int m_mode,int MN) {
 				}
 			}
 		}
-	}
-
-	if (cudaDeviceSynchronize() != cudaSuccess) {
-		fprintf(stderr, "Cuda error: Failed to synchronize\n");
 	}
 
 	cufftDestroy(plan);
@@ -276,7 +288,7 @@ Mat fre_spectrum(cufftComplex* data,int NX,int NY,int mode) {
 			if (mode == 0)
 				data_spectrum[NX*i + j] = sqrt(pow(data[NX*i + j].x, 2) + pow(data[NX*i + j].y, 2));
 			if (mode == 1)
-				data_spectrum[NX*i + j] = 1 + log(sqrt(pow(data[NX*i + j].x, 2) + pow(data[NX*i + j].y, 2)));//对数
+				data_spectrum[NX*i + j] = log(1+sqrt(pow(data[NX*i + j].x, 2) + pow(data[NX*i + j].y, 2)));//对数
 			if (j == 0 && i == 0) {
 				min = data_spectrum[NX*i + j];
 				max = data_spectrum[NX*i + j];
@@ -303,6 +315,62 @@ Mat fre_spectrum(cufftComplex* data,int NX,int NY,int mode) {
 
 	Mat dstImg1 = Mat::zeros(NY, NX, CV_8UC1);//缩小
 	cudaMemcpy(dstImg1.data, data_spectrum_uchar, NX * NY * sizeof(uchar), cudaMemcpyDefault);
+	cudaFree(data_spectrum);
+	cudaFree(data_spectrum_uchar);
+	return dstImg1;
+}
 
+
+//输入是已经傅里叶或者反傅里叶化的cufftComplex类型，输出可以绘制图像的相位Mat图
+//mode=0：普通频谱，mode=1：log频谱转换
+Mat angle_spectrum(cufftComplex* data, int NX, int NY) {
+
+	//绘制频谱图，无中心化、中心化、对数化 //这部分完全可以cuda化，目前没有做这项工作
+	float* data_spectrum1;
+	cudaMallocManaged((void**)&data_spectrum1, sizeof(float)*NX*NY);
+
+	uchar* data_spectrum_uchar1;
+	cudaMallocManaged((void**)&data_spectrum_uchar1, sizeof(uchar)*NX*NY);
+
+	//计算频谱
+	float max = 0.0f;
+	float min = 10000000000000.0f;
+	for (int i = 0; i < NY; i++)
+	{
+		for (int j = 0; j < NX; j++)
+		{   
+            float temp=atan2(data[NX*i + j].y,data[NX*i + j].x);
+            if(temp<0)
+               temp=2*3.1415926+temp;
+            data_spectrum1[NX*i + j] = log(1+temp);
+			//cout<<data_spectrum1[NX*i + j]<<endl;
+			if (j == 0 && i == 0) {
+				min = data_spectrum1[NX*i + j];
+				max = data_spectrum1[NX*i + j];
+			}
+			else {
+				if (data_spectrum1[NX*i + j] < min)
+					min = data_spectrum1[NX*i + j];
+				if (data_spectrum1[NX*i + j] > max)
+					max = data_spectrum1[NX*i + j];
+			}
+		}
+	}
+
+	//归一化以后，把频率变为图像格式
+	float max_min = max - min;
+
+	for (int i = 0; i < NY; i++)
+	{
+		for (int j = 0; j < NX; j++)
+		{
+			data_spectrum_uchar1[NX*i + j] = (uchar)(((data_spectrum1[NX*i + j] - min) / max_min) * 255);
+		}
+	}
+
+	Mat dstImg1 = Mat::zeros(NY, NX, CV_8UC1);//缩小
+	cudaMemcpy(dstImg1.data, data_spectrum_uchar1, NX * NY * sizeof(uchar), cudaMemcpyDefault);
+	cudaFree(data_spectrum1);
+	cudaFree(data_spectrum_uchar1);
 	return dstImg1;
 }
