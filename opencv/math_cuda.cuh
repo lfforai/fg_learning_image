@@ -12,12 +12,6 @@
 #include <curand.h>
 #include "cufft.h"
 #include "math.h"
-using namespace std;
-using namespace cv;
 
-extern "C" void cufft(char* path , int mode);
-void cuffttest(char *path);
-
-//Õ®”√À„◊”
-extern "C" Mat fre_spectrum(cufftComplex* data, int NX, int NY, int mode);
-extern "C" cufftComplex* cufft_fun(char* path, int mode = 0, int m_mode = 0, int MN = 0);
+void atan_cpu_test();
+void cufft_math_test(char* path, int mode = 0);

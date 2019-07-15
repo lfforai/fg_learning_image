@@ -14,6 +14,9 @@
     <Filter Include="cudatool">
       <UniqueIdentifier>{ca9c2fe6-7360-4b10-8ae2-9b44f13b2665}</UniqueIdentifier>
     </Filter>
+    <Filter Include="rotate">
+      <UniqueIdentifier>{d0d3ad30-2c0d-415c-bb20-f4d35931da11}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="cufft.cu">
@@ -28,6 +31,9 @@
     <CudaCompile Include="image_scale2.cu">
       <Filter>image_scale</Filter>
     </CudaCompile>
+    <CudaCompile Include="image_rotate.cu">
+      <Filter>rotate</Filter>
+    </CudaCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="cufft.cuh">
@@ -39,10 +45,19 @@
     <ClInclude Include="cudatool.cuh">
       <Filter>cudatool</Filter>
     </ClInclude>
+    <ClInclude Include="math_cuda.cuh">
+      <Filter>cudatool</Filter>
+    </ClInclude>
+    <ClInclude Include="image_rotate.cuh">
+      <Filter>rotate</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="mian.cpp" />
     <ClCompile Include="cudatool.cu">
+      <Filter>cudatool</Filter>
+    </ClCompile>
+    <ClCompile Include="math_cuda.cu">
       <Filter>cudatool</Filter>
     </ClCompile>
   </ItemGroup>

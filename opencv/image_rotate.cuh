@@ -5,19 +5,17 @@
 #include <iostream>
 #include <string>
 #include <cuda.h>
-#include <cuda_runtime.h>
 #include "math.h"
 #include <device_launch_parameters.h>
 #include <sstream>
 #include <curand.h>
 #include "cufft.h"
-#include "math.h"
+//// Utilities and timing functions
+//#include <helper_functions.h>    // includes cuda.h and cuda_runtime_api.h
+//
+//// CUDA helper functions
+//#include <helper_cuda.h>         // helper functions for CUDA error check
 using namespace std;
 using namespace cv;
 
-extern "C" void cufft(char* path , int mode);
-void cuffttest(char *path);
-
-//Õ®”√À„◊”
-extern "C" Mat fre_spectrum(cufftComplex* data, int NX, int NY, int mode);
-extern "C" cufftComplex* cufft_fun(char* path, int mode = 0, int m_mode = 0, int MN = 0);
+Mat image_rotate_point_GPU(char* path, Mat lena_o, int ifhd=0);

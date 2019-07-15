@@ -42,8 +42,8 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>C:\opencv\include;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\opencv\x64\vc15\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>C:\ProgramData\NVIDIA Corporation\CUDA Samples\v10.0\common\inc;C:\opencv\include;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\ProgramData\NVIDIA Corporation\CUDA Samples\v10.0\common\lib\x64;C:\opencv\x64\vc15\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -82,6 +82,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <CudaCompile Include="cufft.cu" />
+    <CudaCompile Include="image_rotate.cu" />
     <CudaCompile Include="image_scale0.cu" />
     <CudaCompile Include="image_scale1.cu" />
     <CudaCompile Include="image_scale2.cu" />
@@ -93,10 +94,13 @@
   <ItemGroup>
     <ClInclude Include="cudatool.cuh" />
     <ClInclude Include="cufft.cuh" />
+    <ClInclude Include="image_rotate.cuh" />
     <ClInclude Include="image_scale.cuh" />
+    <ClInclude Include="math_cuda.cuh" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="cudatool.cu" />
+    <ClCompile Include="math_cuda.cu" />
     <ClCompile Include="mian.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
