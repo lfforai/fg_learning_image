@@ -90,6 +90,7 @@
   <ItemGroup>
     <Image Include="..\..\..\..\Desktop\I.png" />
     <Image Include="..\..\..\..\Desktop\lena.jpg" />
+    <Image Include="old.png" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="cudatool.cuh" />

@@ -242,8 +242,6 @@ void fre_angle_graph() {
 	//real.convertTo(real, CV_8U);
 	imshow("保留女人图的频谱，使用I图相位", real);
 
-	   
-	
 }
 
 int main()

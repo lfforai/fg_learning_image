@@ -1,8 +1,15 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Image Include="..\..\..\..\Desktop\lena.jpg" />
-    <Image Include="..\..\..\..\Desktop\I.png" />
+    <Image Include="..\..\..\..\Desktop\I.png">
+      <Filter>piture</Filter>
+    </Image>
+    <Image Include="..\..\..\..\Desktop\lena.jpg">
+      <Filter>piture</Filter>
+    </Image>
+    <Image Include="old.png">
+      <Filter>piture</Filter>
+    </Image>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="cufft">
@@ -19,6 +26,9 @@
     </Filter>
     <Filter Include="opencv">
       <UniqueIdentifier>{41d92a1c-b226-4130-a6f3-8c4f42c5d5f1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="piture">
+      <UniqueIdentifier>{4ec11fe1-bf7e-4325-8ef9-1fedeee08e95}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
