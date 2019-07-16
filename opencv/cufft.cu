@@ -267,6 +267,7 @@ cufftComplex* cufft_fun(const char* path,Mat Lena_o,int mode,int m_mode,int MN,i
 	return data;
 }
 
+
 //输入是已经傅里叶或者反傅里叶化的cufftComplex类型，输出可以绘制图像的频谱Mat图
 //mode=0：普通频谱，mode=1：log频谱转换
 Mat fre_spectrum(cufftComplex* data,int NX,int NY,int mode) {
@@ -320,7 +321,6 @@ Mat fre_spectrum(cufftComplex* data,int NX,int NY,int mode) {
 	return dstImg1;
 }
 
-
 //输入是已经傅里叶或者反傅里叶化的cufftComplex类型，输出可以绘制图像的相位Mat图
 //mode=0：普通频谱，mode=1：log频谱转换
 Mat angle_spectrum(cufftComplex* data, int NX, int NY) {
@@ -339,9 +339,12 @@ Mat angle_spectrum(cufftComplex* data, int NX, int NY) {
 	{
 		for (int j = 0; j < NX; j++)
 		{   
-            float temp=atan2(data[NX*i + j].y,data[NX*i + j].x);
-            if(temp<0)
-               temp=2*3.1415926+temp;
+            //float temp=atan2(data[NX*i + j].y,data[NX*i + j].x)*180.0/3.1415926;
+            //if(temp<0)
+            //   temp=360.0+temp;
+			float temp = atan2(data[NX*i + j].y, data[NX*i + j].x);
+			if (temp < 0)
+				temp = 2*3.1415926 + temp;
             data_spectrum1[NX*i + j] = log(1+temp);
 			//cout<<data_spectrum1[NX*i + j]<<endl;
 			if (j == 0 && i == 0) {

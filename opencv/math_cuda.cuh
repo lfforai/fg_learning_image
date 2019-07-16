@@ -12,6 +12,9 @@
 #include <curand.h>
 #include "cufft.h"
 #include "math.h"
+using namespace std;
+using namespace cv;
 
 void atan_cpu_test();
 void cufft_math_test(char* path, int mode = 0);
+void hy_fun(Mat Lena_o);

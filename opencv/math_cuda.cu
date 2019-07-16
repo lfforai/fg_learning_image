@@ -112,3 +112,88 @@ void cufft_math_test(char* path, int mode)
 	cufftDestroy(plan);
 	cudaFree(data);
 }
+
+//图像傅里叶变换和反傅里叶变换还原
+void hy_fun(Mat Lena_o) {
+	Mat Lena = Lena_o.clone();
+
+	int imgWidth_src = Lena.cols;//原图像宽 x
+	int imgHeight_src = Lena.rows;//原图像高 y
+
+	int NX = Lena.cols;
+	int NY = Lena.rows;
+	int length = NX * NY;
+
+	int  BATCH = 1;
+	int  NRANK = 2;
+
+	cufftHandle plan;
+	cufftComplex *data;
+
+	int n[2] = { NX, NY };
+	cudaMallocManaged((void**)&data, sizeof(cufftComplex)*NX*NY);
+
+	if (cudaGetLastError() != cudaSuccess) {
+		fprintf(stderr, "Cuda error: Failed to allocate\n");
+	}
+
+	//把图像元素赋值给赋值给实数部分
+	for (int i = 0; i < NY; i++)
+	{
+		for (int j = 0; j < NX; j++)
+		{
+			data[NX*i + j].x = (float)Lena.data[NX*i + j];//非中心化
+			data[NX*i + j].y = 0.0;
+		}
+	}
+
+	/* Create a 2D FFT plan. */
+	if (cufftPlanMany(&plan, NRANK, n,
+		NULL, 1, NX*NY, // *inembed, istride, idist
+		NULL, 1, NX*NY, // *onembed, ostride, odist
+		CUFFT_C2C, BATCH) != CUFFT_SUCCESS) {
+		fprintf(stderr, "CUFFT error: Plan creation failed");
+	}
+
+
+	if (cufftExecC2C(plan, data, data, CUFFT_FORWARD) != CUFFT_SUCCESS)
+	{
+		fprintf(stderr, "CUFFT error: ExecC2C Forward failed");
+	}
+
+
+	if (cudaDeviceSynchronize() != cudaSuccess)
+	{
+		fprintf(stderr, "Cuda error: Failed to synchronize\n");
+	}
+
+
+	if (cufftExecC2C(plan, data, data, CUFFT_INVERSE) != CUFFT_SUCCESS) {
+		fprintf(stderr, "CUFFT error: ExecC2C Forward failed");
+	}
+
+	if (cudaDeviceSynchronize() != cudaSuccess) {
+		fprintf(stderr, "Cuda error: Failed to synchronize\n");
+	}
+
+	//for (int i = 0; i < NY; i++)
+	//{
+	//	for (int j = 0; j < NX; j++)
+	//	{
+	//		cout <<"x:"<<data[NX*i + j].x<< endl;
+	//	}
+	//}
+
+	Mat dstImg1 = Mat::zeros(NY, NX, CV_8UC1);//缩小
+	for (int i = 0; i < NY; i++)
+	{
+		for (int j = 0; j < NX; j++)
+		{
+			dstImg1.data[NX*i + j] = (uchar)(data[NX*i + j].x / length);
+			//data[NX*i + j].y =(uchar)(data[NX*i + j].y / length);
+		}
+	}
+
+	cufftDestroy(plan);
+	imshow("cufft原图:", dstImg1);
+}
