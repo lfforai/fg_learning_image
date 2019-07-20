@@ -90,6 +90,13 @@
   <ItemGroup>
     <Image Include="..\..\..\..\Desktop\I.png" />
     <Image Include="..\..\..\..\Desktop\lena.jpg" />
+    <Image Include="..\..\..\..\Desktop\opencv\blood0.png" />
+    <Image Include="..\..\..\..\Desktop\opencv\blood1.png" />
+    <Image Include="..\..\..\..\Desktop\opencv\blood2.png" />
+    <Image Include="..\..\..\..\Desktop\opencv\blood3.png" />
+    <Image Include="..\..\..\..\Desktop\opencv\breast.png" />
+    <Image Include="..\..\..\..\Desktop\opencv\skeleton.png" />
+    <Image Include="..\..\..\..\Desktop\opencv\street.png" />
     <Image Include="old.png" />
   </ItemGroup>
   <ItemGroup>
@@ -98,12 +105,14 @@
     <ClInclude Include="image_rotate.cuh" />
     <ClInclude Include="image_scale.cuh" />
     <ClInclude Include="math_cuda.cuh" />
+    <ClInclude Include="opencv_chapter3.h" />
     <ClInclude Include="opencv_DFT.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="cudatool.cu" />
     <ClCompile Include="math_cuda.cu" />
     <ClCompile Include="mian.cpp" />
+    <ClCompile Include="opencv_chapter3.cpp" />
     <ClCompile Include="opencv_DFT.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

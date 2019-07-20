@@ -10,6 +10,27 @@
     <Image Include="old.png">
       <Filter>piture</Filter>
     </Image>
+    <Image Include="..\..\..\..\Desktop\opencv\breast.png">
+      <Filter>piture</Filter>
+    </Image>
+    <Image Include="..\..\..\..\Desktop\opencv\skeleton.png">
+      <Filter>piture</Filter>
+    </Image>
+    <Image Include="..\..\..\..\Desktop\opencv\street.png">
+      <Filter>piture</Filter>
+    </Image>
+    <Image Include="..\..\..\..\Desktop\opencv\blood0.png">
+      <Filter>piture</Filter>
+    </Image>
+    <Image Include="..\..\..\..\Desktop\opencv\blood1.png">
+      <Filter>piture</Filter>
+    </Image>
+    <Image Include="..\..\..\..\Desktop\opencv\blood2.png">
+      <Filter>piture</Filter>
+    </Image>
+    <Image Include="..\..\..\..\Desktop\opencv\blood3.png">
+      <Filter>piture</Filter>
+    </Image>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="cufft">
@@ -67,6 +88,9 @@
     <ClInclude Include="opencv_DFT.h">
       <Filter>opencv</Filter>
     </ClInclude>
+    <ClInclude Include="opencv_chapter3.h">
+      <Filter>opencv</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="mian.cpp" />
@@ -77,6 +101,9 @@
       <Filter>cudatool</Filter>
     </ClCompile>
     <ClCompile Include="opencv_DFT.cpp">
+      <Filter>opencv</Filter>
+    </ClCompile>
+    <ClCompile Include="opencv_chapter3.cpp">
       <Filter>opencv</Filter>
     </ClCompile>
   </ItemGroup>

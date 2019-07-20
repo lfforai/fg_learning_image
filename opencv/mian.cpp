@@ -2,6 +2,7 @@
 #include "image_scale.cuh"  //图形缩放实验
 #include "opencv_DFT.h"
 #include "math_cuda.cuh"
+#include "opencv_chapter3.h"
 
 //系统包
 #include <opencv2/opencv.hpp>
@@ -104,8 +105,6 @@ void fre_angle_graph() {
 }
 
 int main()
-{
-	filter_test();
-	waitKey(0);
+{chapter3_test();
 }
 
