@@ -7,6 +7,7 @@
 #include <string>
 #include "math_cuda.cuh"
 #include "image_rotate.cuh"
+#include<time.h>
 
 void graph_inverse(Mat& image_graph);
 void chapter3_test();

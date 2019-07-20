@@ -106,5 +106,6 @@ void fre_angle_graph() {
 
 int main()
 {chapter3_test();
+//cout<<sizeof(float **)<<endl;
 }
 

@@ -95,6 +95,35 @@ cv::Mat getImageofHistogram(const cv::Mat &hist, int zoom)
 	return histImg;
 }
 
+//检查hist是不是严格单调函数,返回第一个不严格单调的index
+Point check_ygdz(Mat& hist)
+{
+	int rows = hist.rows;//256
+	int cols = hist.cols;//1
+
+	Point result;
+	result.x = -1;
+	result.y = -1;
+
+	Mat hist_N = hist.clone();
+	hist_N.convertTo(hist_N, CV_8U);
+
+	for (int i = 0; i < hist.rows; i++)
+	{
+		uchar mark = hist_N.at<uchar>(i, 0);
+		//不能有重复i！=j 但是value[i]=value[j]
+		for (int j = i + 1; j < hist.rows; j++)
+		{
+			if (mark == hist_N.at<uchar>(j, 0)) {
+				result.x = i;
+				result.y = j;
+				break;
+			}
+		}
+	}
+	return result;
+}
+
 //直方图概率进行简单图像转换
 void hist_converse(Mat &image_src,Mat &hist)
 {
@@ -112,9 +141,10 @@ void hist_converse(Mat &image_src,Mat &hist)
 	{ sum=sum+hist.at<float>(i, 0);
 	  convers_talbe.at<float>(i, 0) =sum;
 	}
+
 	convers_talbe = convers_talbe /NM[0]*255;
 	convers_talbe.convertTo(convers_talbe,CV_8U);//转换过程中数据是按四舍五入
-
+	
 	//利用映射表替换image_src中的函数
 	for(int i = 0; i < image_src.rows; i++)
 	  {
@@ -124,6 +154,60 @@ void hist_converse(Mat &image_src,Mat &hist)
 	      }
 	  }
 	image_src.convertTo(image_src, CV_8U);
+}
+
+//规定直方图,hist是image_src的直方图
+//规定直方图，gd_image不为空就是自己传入的
+void hist_converse2(Mat &image_src,Mat &hist,Mat &gd_image)
+{
+	int cols = hist.cols;
+	int rows = hist.rows;
+
+	Scalar NM = sum(hist);
+	hist.convertTo(hist, CV_32F);
+	image_src.convertTo(image_src, CV_8U);
+	
+	//r-s的转换图
+	Mat r2s_convers_talbe = Mat(hist.size(), CV_32F);
+	float sum_N = 0.0;
+	for (int i = 0; i < rows; i++)
+	{
+		sum_N = sum_N + hist.at<float>(i, 0);
+		r2s_convers_talbe.at<float>(i, 0) = sum_N;
+	}
+	r2s_convers_talbe = r2s_convers_talbe / NM[0] * 255;
+	r2s_convers_talbe.convertTo(r2s_convers_talbe, CV_8U);//转换过程中数据是按四舍五入
+
+   //z-s的转换图
+	gd_image.convertTo(gd_image, CV_32F);
+	NM = sum(gd_image);
+	Mat z2s_convers_talbe = Mat(gd_image.size(), CV_32F);
+	sum_N = 0.0;
+	for (int i = 0; i < rows; i++)
+	{   sum_N = sum_N + gd_image.at<float>(i, 0);
+		z2s_convers_talbe.at<float>(i, 0) = sum_N;
+	}
+	z2s_convers_talbe = z2s_convers_talbe / NM[0] * 255;
+	z2s_convers_talbe.convertTo(z2s_convers_talbe, CV_8U);//转换过程中数据是按四舍五入
+    
+	//利用映射表替换image_src中的函数把z-s||r-s对应到z-r
+	for (int i = 0; i < image_src.rows; i++)
+	{
+		for (int j = 0; j < image_src.cols; j++)
+		{
+			int index=r2s_convers_talbe.at<uchar>(image_src.at<uchar>(i, j), 0);//r=>s
+			uchar  value=0;
+			for(int n = 0; n <z2s_convers_talbe.rows; n++)
+			   {
+				if((uchar)index == z2s_convers_talbe.at<uchar>(n, 0))
+				  {
+					value=(uchar)n;
+					break;
+			      }
+			   }
+			image_src.at<uchar>(i, j) =value;
+		}
+	}
 }
 
 //------chapter3_test--------
@@ -150,15 +234,50 @@ void chapter3_test()
 	gamma(street, 1.0, 8.0);
 
 	//3.3.1 图像直方图
-	Mat blood = imread("C:/Users/Administrator/Desktop/opencv/blood3.png", IMREAD_GRAYSCALE);
+	Mat blood = imread("C:/Users/Administrator/Desktop/opencv/phobos.png", IMREAD_GRAYSCALE);
+	
 	imshow("blood_原图",blood);
 	Mat blood_src=blood.clone();
+	Mat blood_src1= blood.clone();
+	
 	Histogram(blood);
 	Mat hist= blood.clone();
+	Mat hist1 = blood.clone();
+	
 	Mat histmat=getImageofHistogram(blood,1);
-	imshow("blood_直方图",histmat);
+	imshow("blood原图_直方图", histmat);
 	hist_converse(blood_src,hist);
-	imshow("blood_转化后的直方图",blood_src);
+	imshow("blood_直方转化图",blood_src);
+	Histogram(blood_src);
+	Mat histmat1 = getImageofHistogram(blood_src,1);
+	imshow("blood_直方图", histmat1);
 
+	//规则直方图
+	srand((int)time(0));
+	float a = 100.0, b = 3000.0;// 生成100-300之间的随机数
+	float num[256];
+	for (int i = 0; i < 15; i++)
+	{
+		//num[i] = rand() % (int)(b - a + 1) + a;
+		num[i] = i*10;
+	}
+
+	for (int i = 15; i < 30; i++)
+	{
+		//num[i] = rand() % (int)(b - a + 1) + a;
+		num[i] = (32-i)*4;
+	}
+
+	for (int i = 30; i < 255; i++)
+	{
+		//num[i] = rand() % (int)(b - a + 1) + a;
+		num[i] = (255 - i)/70;
+	}
+	Mat hist2(hist.size(),CV_32F);
+	memcpy(hist2.data,num, sizeof(float) * 256);
+	hist_converse2(blood_src1,hist1,hist2);
+    imshow("blood_规则转化后的直方图", blood_src1);
+	Histogram(blood_src1);
+	imshow("ok", blood_src1);
 	waitKey(0);
 }
