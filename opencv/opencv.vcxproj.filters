@@ -31,6 +31,9 @@
     <Image Include="..\..\..\..\Desktop\opencv\blood3.png">
       <Filter>piture</Filter>
     </Image>
+    <Image Include="..\..\..\..\Desktop\opencv\phobos.png">
+      <Filter>piture</Filter>
+    </Image>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="cufft">

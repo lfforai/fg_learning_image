@@ -238,7 +238,7 @@ void chapter3_test()
 	//3.3.1 图像直方图
 	Mat blood = imread("C:/Users/Administrator/Desktop/opencv/phobos.png", IMREAD_GRAYSCALE);
 	
-	imshow("blood_原图",blood);
+	imshow("phobos_原图",blood);
 	Mat blood_src=blood.clone();
 	Mat blood_src1= blood.clone();
 	
@@ -247,12 +247,12 @@ void chapter3_test()
 	Mat hist1 = blood.clone();
 	
 	Mat histmat=getImageofHistogram(blood,1);
-	imshow("blood原图_直方图", histmat);
+	imshow("phobos原图_直方图", histmat);
 	hist_converse(blood_src,hist);
-	imshow("blood_直方转化图",blood_src);
+	imshow("phobos_直方转化图",blood_src);
 	Histogram(blood_src);
 	Mat histmat1 = getImageofHistogram(blood_src,1);
-	imshow("blood_直方图", histmat1);
+	imshow("phobos_直方图", histmat1);
 
 	//规则直方图
 	srand((int)time(0));
@@ -291,9 +291,9 @@ void chapter3_test()
 	Mat hist2(hist.size(),CV_32F);
 	memcpy(hist2.data,num, sizeof(float) * 256);
 	hist_converse2(blood_src1,hist1,hist2);
-    imshow("blood_直方图规则化", blood_src1);
+    imshow("phobos_直方图规则化", blood_src1);
 	Histogram(blood_src1);
 	Mat histmat2 = getImageofHistogram(blood_src1, 1);
-	imshow("blood_规则的直方图", histmat2);
+	imshow("phobos_规则的直方图", histmat2);
 	waitKey(0);
 }
