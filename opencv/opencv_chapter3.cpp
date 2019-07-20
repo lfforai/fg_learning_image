@@ -157,7 +157,7 @@ void hist_converse(Mat &image_src,Mat &hist)
 }
 
 //规定直方图,hist是image_src的直方图
-//规定直方图，gd_image不为空就是自己传入的
+//规定直方图,gd_image不为空就是自己传入的,规则直方图
 void hist_converse2(Mat &image_src,Mat &hist,Mat &gd_image)
 {
 	int cols = hist.cols;
@@ -177,8 +177,9 @@ void hist_converse2(Mat &image_src,Mat &hist,Mat &gd_image)
 	}
 	r2s_convers_talbe = r2s_convers_talbe / NM[0] * 255;
 	r2s_convers_talbe.convertTo(r2s_convers_talbe, CV_8U);//转换过程中数据是按四舍五入
+	//cout << "r2s_convers_talbe" << r2s_convers_talbe << endl;
 
-   //z-s的转换图
+    //z-s的转换图
 	gd_image.convertTo(gd_image, CV_32F);
 	NM = sum(gd_image);
 	Mat z2s_convers_talbe = Mat(gd_image.size(), CV_32F);
@@ -189,7 +190,8 @@ void hist_converse2(Mat &image_src,Mat &hist,Mat &gd_image)
 	}
 	z2s_convers_talbe = z2s_convers_talbe / NM[0] * 255;
 	z2s_convers_talbe.convertTo(z2s_convers_talbe, CV_8U);//转换过程中数据是按四舍五入
-    
+	//cout<<"z2s_convers_talbe"<<z2s_convers_talbe<<endl;
+	
 	//利用映射表替换image_src中的函数把z-s||r-s对应到z-r
 	for (int i = 0; i < image_src.rows; i++)
 	{
@@ -213,25 +215,25 @@ void hist_converse2(Mat &image_src,Mat &hist,Mat &gd_image)
 //------chapter3_test--------
 void chapter3_test() 
 {
-	//3.2.1 graph inverse
-	Mat breast = imread("C:/Users/Administrator/Desktop/opencv/breast.png", IMREAD_GRAYSCALE);
-	imshow("breast_原图", breast);
-	graph_inverse(breast);
+	////3.2.1 graph inverse
+	//Mat breast = imread("C:/Users/Administrator/Desktop/opencv/breast.png", IMREAD_GRAYSCALE);
+	//imshow("breast_原图", breast);
+	//graph_inverse(breast);
 
-	//3.2.2 log_vary
-	Mat Lena = imread("C:/Users/Administrator/Desktop/opencv/Lena.jpg", IMREAD_GRAYSCALE);	
-	Mat Lena_print = Lena.clone();
-	imshow("Lena_原图", Lena_print);
-	log_vary(Lena,1.0);
-	
-	//3.2.3 gamma
-	Mat skeleton = imread("C:/Users/Administrator/Desktop/opencv/skeleton.png", IMREAD_GRAYSCALE);
-	imshow("skeleton_原图", skeleton);
-	gamma(skeleton,1.0,0.5);
+	////3.2.2 log_vary
+	//Mat Lena = imread("C:/Users/Administrator/Desktop/opencv/Lena.jpg", IMREAD_GRAYSCALE);	
+	//Mat Lena_print = Lena.clone();
+	//imshow("Lena_原图", Lena_print);
+	//log_vary(Lena,1.0);
+	//
+	////3.2.3 gamma
+	//Mat skeleton = imread("C:/Users/Administrator/Desktop/opencv/skeleton.png", IMREAD_GRAYSCALE);
+	//imshow("skeleton_原图", skeleton);
+	//gamma(skeleton,1.0,0.5);
 
-	Mat street = imread("C:/Users/Administrator/Desktop/opencv/street.png", IMREAD_GRAYSCALE);
-	imshow("street_原图", street);
-	gamma(street, 1.0, 8.0);
+	//Mat street = imread("C:/Users/Administrator/Desktop/opencv/street.png", IMREAD_GRAYSCALE);
+	//imshow("street_原图", street);
+	//gamma(street, 1.0, 8.0);
 
 	//3.3.1 图像直方图
 	Mat blood = imread("C:/Users/Administrator/Desktop/opencv/phobos.png", IMREAD_GRAYSCALE);
@@ -256,28 +258,42 @@ void chapter3_test()
 	srand((int)time(0));
 	float a = 100.0, b = 3000.0;// 生成100-300之间的随机数
 	float num[256];
-	for (int i = 0; i < 15; i++)
+	for (int i = 0; i < 7; i++)
 	{
 		//num[i] = rand() % (int)(b - a + 1) + a;
-		num[i] = i*10;
+		num[i] = i*35;
 	}
 
-	for (int i = 15; i < 30; i++)
+	for (int i = 7; i <15; i++)
 	{
 		//num[i] = rand() % (int)(b - a + 1) + a;
-		num[i] = (32-i)*4;
+		num[i] = (15-i)*35;
+	}
+	
+	for (int i = 15; i < 185; i++)
+	{
+		//num[i] = rand() % (int)(b - a + 1) + a;
+		num[i] = (184 - i)/25;
 	}
 
-	for (int i = 30; i < 255; i++)
+	for (int i = 185; i < 200; i++)
 	{
 		//num[i] = rand() % (int)(b - a + 1) + a;
-		num[i] = (255 - i)/70;
+		num[i] = (i-185)*2;
 	}
+
+	for (int i = 200; i < 256; i++)
+	{
+		//num[i] = rand() % (int)(b - a + 1) + a;
+		num[i] = (255 - i) / 8;
+	}
+
 	Mat hist2(hist.size(),CV_32F);
 	memcpy(hist2.data,num, sizeof(float) * 256);
 	hist_converse2(blood_src1,hist1,hist2);
-    imshow("blood_规则转化后的直方图", blood_src1);
+    imshow("blood_直方图规则化", blood_src1);
 	Histogram(blood_src1);
-	imshow("ok", blood_src1);
+	Mat histmat2 = getImageofHistogram(blood_src1, 1);
+	imshow("blood_规则的直方图", histmat2);
 	waitKey(0);
 }
