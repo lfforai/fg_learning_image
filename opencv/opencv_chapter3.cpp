@@ -235,65 +235,82 @@ void chapter3_test()
 	//imshow("street_原图", street);
 	//gamma(street, 1.0, 8.0);
 
-	//3.3.1 图像直方图
-	Mat blood = imread("C:/Users/Administrator/Desktop/opencv/phobos.png", IMREAD_GRAYSCALE);
+	////3.3.1 图像直方图
+	//Mat blood = imread("C:/Users/Administrator/Desktop/opencv/phobos.png", IMREAD_GRAYSCALE);
+	//
+	//imshow("phobos_原图",blood);
+	//Mat blood_src=blood.clone();
+	//Mat blood_src1= blood.clone();
+	//
+	//Histogram(blood);
+	//Mat hist= blood.clone();
+	//Mat hist1 = blood.clone();
+	//
+	//Mat histmat=getImageofHistogram(blood,1);
+	//imshow("phobos原图_直方图", histmat);
+	//hist_converse(blood_src,hist);
+	//imshow("phobos_直方转化图",blood_src);
+	//Histogram(blood_src);
+	//Mat histmat1 = getImageofHistogram(blood_src,1);
+	//imshow("phobos_直方图", histmat1);
+
+	////规则直方图
+	//srand((int)time(0));
+	//float a = 100.0, b = 3000.0;// 生成100-300之间的随机数
+	//float num[256];
+	//for (int i = 0; i < 7; i++)
+	//{
+	//	//num[i] = rand() % (int)(b - a + 1) + a;
+	//	num[i] = i*35;
+	//}
+
+	//for (int i = 7; i <15; i++)
+	//{
+	//	//num[i] = rand() % (int)(b - a + 1) + a;
+	//	num[i] = (15-i)*35;
+	//}
+	//
+	//for (int i = 15; i < 185; i++)
+	//{
+	//	//num[i] = rand() % (int)(b - a + 1) + a;
+	//	num[i] = (184 - i)/25;
+	//}
+
+	//for (int i = 185; i < 200; i++)
+	//{
+	//	//num[i] = rand() % (int)(b - a + 1) + a;
+	//	num[i] = (i-185)*2;
+	//}
+
+	//for (int i = 200; i < 256; i++)
+	//{
+	//	//num[i] = rand() % (int)(b - a + 1) + a;
+	//	num[i] = (255 - i) / 8;
+	//}
+
+	//Mat hist2(hist.size(),CV_32F);
+	//memcpy(hist2.data,num, sizeof(float) * 256);
+	//hist_converse2(blood_src1,hist1,hist2);
+ //   imshow("phobos_直方图规则化", blood_src1);
+	//Histogram(blood_src1);
+	//Mat histmat2 = getImageofHistogram(blood_src1, 1);
+	//imshow("phobos_规则的直方图", histmat2);
+	//waitKey(0);
+
+	//3.6拉普拉斯变换
+	Mat earth = imread("C:/Users/Administrator/Desktop/opencv/earth.png", IMREAD_GRAYSCALE);
+	Mat earth_src=earth.clone();
+	imshow("地球北极_原图", earth);
+	Laplace_cuda(earth, 0,1);
+    
+	//绘制拉普拉斯图 
+	//demarcate(earth);
+	//earth.convertTo(earth, CV_8U);
+	//imshow("拉普拉斯变换图", earth);
 	
-	imshow("phobos_原图",blood);
-	Mat blood_src=blood.clone();
-	Mat blood_src1= blood.clone();
-	
-	Histogram(blood);
-	Mat hist= blood.clone();
-	Mat hist1 = blood.clone();
-	
-	Mat histmat=getImageofHistogram(blood,1);
-	imshow("phobos原图_直方图", histmat);
-	hist_converse(blood_src,hist);
-	imshow("phobos_直方转化图",blood_src);
-	Histogram(blood_src);
-	Mat histmat1 = getImageofHistogram(blood_src,1);
-	imshow("phobos_直方图", histmat1);
-
-	//规则直方图
-	srand((int)time(0));
-	float a = 100.0, b = 3000.0;// 生成100-300之间的随机数
-	float num[256];
-	for (int i = 0; i < 7; i++)
-	{
-		//num[i] = rand() % (int)(b - a + 1) + a;
-		num[i] = i*35;
-	}
-
-	for (int i = 7; i <15; i++)
-	{
-		//num[i] = rand() % (int)(b - a + 1) + a;
-		num[i] = (15-i)*35;
-	}
-	
-	for (int i = 15; i < 185; i++)
-	{
-		//num[i] = rand() % (int)(b - a + 1) + a;
-		num[i] = (184 - i)/25;
-	}
-
-	for (int i = 185; i < 200; i++)
-	{
-		//num[i] = rand() % (int)(b - a + 1) + a;
-		num[i] = (i-185)*2;
-	}
-
-	for (int i = 200; i < 256; i++)
-	{
-		//num[i] = rand() % (int)(b - a + 1) + a;
-		num[i] = (255 - i) / 8;
-	}
-
-	Mat hist2(hist.size(),CV_32F);
-	memcpy(hist2.data,num, sizeof(float) * 256);
-	hist_converse2(blood_src1,hist1,hist2);
-    imshow("phobos_直方图规则化", blood_src1);
-	Histogram(blood_src1);
-	Mat histmat2 = getImageofHistogram(blood_src1, 1);
-	imshow("phobos_规则的直方图", histmat2);
+	earth_src.convertTo(earth_src,CV_32S);
+	earth_src = earth_src + earth;
+	earth_src.convertTo(earth_src, CV_8U);
+	imshow("地球北极_拉普拉斯变换后的图",earth_src);
 	waitKey(0);
 }

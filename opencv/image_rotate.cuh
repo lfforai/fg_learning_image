@@ -20,3 +20,5 @@ using namespace cv;
 
 Mat image_rotate_point_GPU(char* path, Mat lena_o, int ifhd=0);
 Mat image_move_point_GPU(char* path, Mat lena_o, int ifhd, int x_move, int y_move);
+void Laplace_cuda(Mat &image, int mode, int c);
+void demarcate(Mat& image_src);
