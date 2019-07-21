@@ -95,6 +95,7 @@
     <Image Include="..\..\..\..\Desktop\opencv\blood2.png" />
     <Image Include="..\..\..\..\Desktop\opencv\blood3.png" />
     <Image Include="..\..\..\..\Desktop\opencv\breast.png" />
+    <Image Include="..\..\..\..\Desktop\opencv\earth.png" />
     <Image Include="..\..\..\..\Desktop\opencv\phobos.png" />
     <Image Include="..\..\..\..\Desktop\opencv\skeleton.png" />
     <Image Include="..\..\..\..\Desktop\opencv\street.png" />
