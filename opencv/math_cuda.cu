@@ -197,3 +197,65 @@ void hy_fun(Mat Lena_o) {
 	cufftDestroy(plan);
 	imshow("cufft原图:", dstImg1);
 }
+
+//图像傅里叶变换以后乘以（-1）^(U+V)是否还原回去图像中心点移动了
+void image_move_to_center(Mat& Lena_o) {
+	Mat Lena_N=Lena_o.clone();
+	move_to_center(Lena_N);
+	imshow("原图移动:",Lena_N);
+
+	Mat real;
+	Mat ima;
+    Mat lena_dft=fast_dft(Lena_o, real, ima);
+
+	for (int i = 0; i < lena_dft.rows; i++)
+	{
+		for (int j = 0; j < lena_dft.cols; j++)
+		{
+			real.at<float>(i, j) = real.at<float>(i, j)*pow(-1.0, (i + j));
+			ima.at<float>(i, j) =  ima.at<float>(i, j) *pow(-1.0, (i + j));
+		}
+	}
+
+	Mat vector[] = { real,ima };
+	merge(vector, 2, lena_dft);
+    
+	//反傅里叶变换还原图像
+	Mat lena_back=fourior_inverser(lena_dft,real,ima);
+	divide(real,lena_back.cols*lena_back.rows,real);
+	//divide(ima,lena_back.cols*lena_back.rows, ima);
+	//cout<<ima<<endl;
+	real.convertTo(real, CV_8U);
+	imshow("乘以（-1）^(u,v)还原原图:",real);
+}
+
+//傅里叶奇偶性测试
+void  odd_even_test() {
+	Mat h = Mat::zeros(600,600,CV_32F);
+	int r_m = (int)(600/2.0)-1;
+	int c_n = (int)(600/2.0)-1;
+	h.at<float>(r_m, c_n) = -1;
+	h.at<float>(r_m, c_n+1) = 0;
+	h.at<float>(r_m, c_n+2) = 1;
+	h.at<float>(r_m+1, c_n) = -2;
+	h.at<float>(r_m+1, c_n+1) = 0;
+	h.at<float>(r_m+1, c_n+2) = 2;
+	h.at<float>(r_m+2, c_n) = -1;
+	h.at<float>(r_m+2, c_n+1) = 0;
+	h.at<float>(r_m+2, c_n+2) = 1;
+
+	Mat real, ima;    
+	Mat a=fast_dft(h, real, ima);
+	ima.convertTo(ima,CV_8U);
+	cout<<ima<<endl;
+	//amplitude_common(ima);
+	//imshow("log频谱滤波器:", a);
+	//cout <<"------------------"<< endl;
+	//real=Mat::zeros(6, 6, CV_32F);
+	//Mat vector[]={real,ima};
+	//merge(vector,2,h);
+	//fourior_inverser(h,real,ima);
+	//divide(real, h.cols*h.rows, real);
+	//cout<<real<<endl;
+    //cout <<ima<< endl;
+}

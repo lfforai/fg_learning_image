@@ -301,7 +301,7 @@ void chapter3_test()
 	Mat earth = imread("C:/Users/Administrator/Desktop/opencv/earth.png", IMREAD_GRAYSCALE);
 	Mat earth_src=earth.clone();
 	imshow("地球北极_原图", earth);
-	Laplace_cuda(earth, 0,1);
+	Laplace_cuda(earth,0,1);
     
 	//绘制拉普拉斯图 
 	//demarcate(earth);

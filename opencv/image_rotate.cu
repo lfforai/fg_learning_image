@@ -221,6 +221,19 @@ __global__ void Kerkel_Laplace(int* pDstImgData, int imgHeight_des_d, int imgWid
 				tex2D(refTex_Laplace, tidx - 1, tidy - 1) + tex2D(refTex_Laplace, tidx + 1, tidy + 1) +
 				tex2D(refTex_Laplace, tidx + 1, tidy - 1) + tex2D(refTex_Laplace, tidx - 1, tidy + 1)) - (int)8 * tex2D(refTex_Laplace, tidx, tidy))*c;
 		}//printf("value=%u,%d,%d,%f,%f \n", pdstimgdata[idx], x1, y2, x_des, y_des);
+
+		if (mode == 3)
+		{
+			pDstImgData[idx] = (int)(((0)*(int)tex2D(refTex_Laplace, tidx + 1, tidy) + (0)*(int)tex2D(refTex_Laplace, tidx - 1, tidy)
+				+2* (int)tex2D(refTex_Laplace, tidx, tidy + 1) -2* (int)tex2D(refTex_Laplace, tidx, tidy - 1) 
+				-1*(int)tex2D(refTex_Laplace, tidx - 1, tidy - 1) + 1* (int)tex2D(refTex_Laplace, tidx + 1, tidy + 1) 
+				-1* (int)tex2D(refTex_Laplace, tidx + 1, tidy - 1) + 1*(int)tex2D(refTex_Laplace, tidx - 1, tidy + 1)) - 0 * (int)tex2D(refTex_Laplace, tidx, tidy))*c;
+		
+	/*		pDstImgData[idx] = (int)(((0)*(int)tex2D(refTex_Laplace, tidx + 1, tidy) + (0)*(int)tex2D(refTex_Laplace, tidx - 1, tidy)
+				 -2 * (int)tex2D(refTex_Laplace, tidx, tidy + 1) + 2 * (int)tex2D(refTex_Laplace, tidx, tidy - 1) +
+				1*(int)tex2D(refTex_Laplace, tidx - 1, tidy - 1) -1 * (int)tex2D(refTex_Laplace, tidx + 1, tidy + 1) +
+				1 * (int)tex2D(refTex_Laplace, tidx + 1, tidy - 1) -(1)*(int)tex2D(refTex_Laplace, tidx - 1, tidy + 1)) - 0 * (int)tex2D(refTex_Laplace, tidx, tidy))*c;*/
+		}//printf("value=%u,%d,%d,%f,%f \n", pdstimgdata[idx], x1, y2, x_des, y_des);
 	}
 }
 
@@ -259,8 +272,8 @@ void Laplace_cuda(Mat &image, int mode, int c) {
 
 	//设置1纹理属性
 	cudaError_t t;
-	refTex_Laplace.addressMode[0] = cudaAddressModeClamp;
-	refTex_Laplace.addressMode[1] = cudaAddressModeClamp;
+	refTex_Laplace.addressMode[0] = cudaAddressModeBorder;
+	refTex_Laplace.addressMode[1] = cudaAddressModeBorder;
 	refTex_Laplace.normalized = false;
 	refTex_Laplace.filterMode = cudaFilterModePoint;
 	//绑定cuArray到纹理

@@ -429,14 +429,12 @@ void fre_angle_graph_opencv() {
 
 }
 
-struct resize_tpye {
-	int size_rows =0;//记录傅里叶最优化增加的0元素
-	int size_cols =0;
-};
-
 
 //滤波器通用模板
 //1)重新调整图片大小
+
+
+
 resize_tpye* graph_resize(Mat &image_src) {
 	//防止二维傅里叶变换周期性导致的缠绕
 	//适应最佳傅里叶变换图像尺寸调整大小
@@ -451,16 +449,18 @@ resize_tpye* graph_resize(Mat &image_src) {
 
 	copyMakeBorder(image_src, image_src, 0, N - image_src.rows, 0, M - image_src.cols,
 		BORDER_CONSTANT, Scalar::all(0));
-	
+
 	///////////////////////////////////////快速傅里叶变换/////////////////////////////////////////////////////
 	int oph = getOptimalDFTSize(image_src.rows);
 	int opw = getOptimalDFTSize(image_src.cols);
+	int resize_w = oph - image_src.rows;
+	int resize_c = opw - image_src.cols;
 
 	copyMakeBorder(image_src, image_src, 0, oph - image_src.rows, 0, opw - image_src.cols,
 		BORDER_CONSTANT, Scalar::all(0));
-	
-	result->size_rows = result->size_rows + oph - image_src.rows;//最后要缩减的总height
-	result->size_cols = result->size_cols + opw - image_src.cols;//weight
+
+	result->size_rows = result->size_rows + resize_w;//最后要缩减的总height
+	result->size_cols = result->size_cols + resize_c;//weight
 	
 	return result;
 }
@@ -560,4 +560,15 @@ void  simple_filter_test() {
 	  women.convertTo(women, CV_8U);
 	  imshow("简单滤波lena:", women);
 	  waitKey(0);
+}
+
+//house 实验
+
+void house_test(Mat& image) {
+	Mat real;
+	Mat ima;
+	Mat image_dft=fast_dft(image,real,ima);
+	//cout<<image<<endl;
+	amplitude_log(image_dft);
+	image=image_dft.clone();
 }
