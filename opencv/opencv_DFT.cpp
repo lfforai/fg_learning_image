@@ -563,7 +563,6 @@ void  simple_filter_test() {
 }
 
 //house 实验
-
 void house_test(Mat& image) {
 	Mat real;
 	Mat ima;

@@ -229,7 +229,7 @@ __global__ void Kerkel_Laplace(int* pDstImgData, int imgHeight_des_d, int imgWid
 				-1*(int)tex2D(refTex_Laplace, tidx - 1, tidy - 1) + 1* (int)tex2D(refTex_Laplace, tidx + 1, tidy + 1) 
 				-1* (int)tex2D(refTex_Laplace, tidx + 1, tidy - 1) + 1*(int)tex2D(refTex_Laplace, tidx - 1, tidy + 1)) - 0 * (int)tex2D(refTex_Laplace, tidx, tidy))*c;
 		
-	/*		pDstImgData[idx] = (int)(((0)*(int)tex2D(refTex_Laplace, tidx + 1, tidy) + (0)*(int)tex2D(refTex_Laplace, tidx - 1, tidy)
+		/*	pDstImgData[idx] = (int)(((0)*(int)tex2D(refTex_Laplace, tidx + 1, tidy) + (0)*(int)tex2D(refTex_Laplace, tidx - 1, tidy)
 				 -2 * (int)tex2D(refTex_Laplace, tidx, tidy + 1) + 2 * (int)tex2D(refTex_Laplace, tidx, tidy - 1) +
 				1*(int)tex2D(refTex_Laplace, tidx - 1, tidy - 1) -1 * (int)tex2D(refTex_Laplace, tidx + 1, tidy + 1) +
 				1 * (int)tex2D(refTex_Laplace, tidx + 1, tidy - 1) -(1)*(int)tex2D(refTex_Laplace, tidx - 1, tidy + 1)) - 0 * (int)tex2D(refTex_Laplace, tidx, tidy))*c;*/
