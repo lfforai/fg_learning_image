@@ -275,7 +275,6 @@ void charter4() {
 	//8)裁剪图片
 	imshow("滤波后的图:", real_src_filter);
 
-
 	Laplace_cuda(dft_lena_filter_space, 3, 1);
 	dft_lena_filter_space.convertTo(dft_lena_filter_space, CV_8U);
 
