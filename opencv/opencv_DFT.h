@@ -20,6 +20,7 @@ int opencv_DFT();
 void fre_angle_graph_opencv();
 void house_test(Mat& image);
 void image_cut(Mat &src_image, resize_tpye* mat_resize);
+void filter_ILPF_test(int rato);
 
 //Õ®”√api
 Mat fourior_inverser(Mat &src_img, cv::Mat &real_img, cv::Mat &ima_img);
