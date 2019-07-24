@@ -109,7 +109,6 @@ void chapter3() {
 	chapter3_test();
 }
 
-
 //七、第四章的各种测试
 void charter4() {
 	chapter4();

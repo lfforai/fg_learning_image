@@ -63,6 +63,9 @@
     <Filter Include="piture">
       <UniqueIdentifier>{4ec11fe1-bf7e-4325-8ef9-1fedeee08e95}</UniqueIdentifier>
     </Filter>
+    <Filter Include="python">
+      <UniqueIdentifier>{15f3ac72-39d7-4328-ade4-c337998c99bd}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="cufft.cu">
@@ -124,5 +127,10 @@
     <ClCompile Include="opencv_chapter4.cpp">
       <Filter>opencv</Filter>
     </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\..\..\IdeaProjects\hutu\.idea\Ringing_bell434 .py">
+      <Filter>python</Filter>
+    </None>
   </ItemGroup>
 </Project>
