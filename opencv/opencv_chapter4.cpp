@@ -38,15 +38,15 @@ void space2frequency()
 	//h.at<float>(h.rows - 1, 1) = -1;
 	//h.at<float>(h.rows - 1, h.cols - 1) = -1;
 
-	h.at<float>(r_m, c_n) = 1;  //必须放在这个位置傅里叶变换以后才是虚奇函数
-	h.at<float>(r_m, c_n + 1) = 2;
-	h.at<float>(r_m, c_n + 2) = 1;
+	h.at<float>(r_m, c_n) = -1;  //必须放在这个位置傅里叶变换以后才是虚奇函数
+	h.at<float>(r_m, c_n + 1) = -2;
+	h.at<float>(r_m, c_n + 2) = -1;
 	h.at<float>(r_m + 1, c_n) = 0;
 	h.at<float>(r_m + 1, c_n + 1) = 0;
 	h.at<float>(r_m + 1, c_n + 2) = 0;
-	h.at<float>(r_m + 2, c_n) = -1;
-	h.at<float>(r_m + 2, c_n + 1) = -2;
-	h.at<float>(r_m + 2, c_n + 2) = -1;
+	h.at<float>(r_m + 2, c_n) = 1;
+	h.at<float>(r_m + 2, c_n + 1) = 2;
+	h.at<float>(r_m + 2, c_n + 2) = 1;
 
 	for (int i = 0; i < h.rows; i++)
 	{
@@ -56,9 +56,13 @@ void space2frequency()
 		}
 	}
 
+	//偶函数查看
+	Met_oe_info*  de_ifo=Mat_is_odd_or_even(h);
+	de_ifo->print();
+	
 	//把滤波器转换到频域上
 	Mat h_dft = fast_dft(h, real, ima);
-	amplitude_log(h_dft);
+	amplitude_common(h_dft);
 	h_dft.convertTo(h_dft, CV_8U);
 	imshow("滤波器频谱图:", h_dft);
 	for (int i = 0; i < ima.rows; i++)
@@ -76,30 +80,29 @@ void space2frequency()
 			real.at<float>(i, j) = 0.0;
 		}
 	}
-
+	
 	//这段注释可以帮助理解为什么需要乘以（-1）^(u+v)*F(U,V)
-	//Mat real_N;
-	//Mat ima_N;
-	//Mat h_tepm[] = {real,ima};
-	//merge(h_tepm,2,h);
-	//fourior_inverser(h, real_N, ima_N);
-	//divide(real_N,real_N.rows*real_N.cols,real_N);
-	//real_N.convertTo(real_N, CV_32S);
-	//ima_N.convertTo(ima_N,CV_32S);
-	//Scalar ss = sum(ima_N);
-	//cout<< ss[0]<<endl;
-	//for (size_t i = 0; i < real_N.rows; i++)
-	//{
-	//  for (size_t j = 0; j <real_N.cols; j++)
-	//	{
-	//		if (abs(real_N.at<int>(i,j))>0) {
-	//			cout << "row:" << i << "|col:" << j << ",value:="<< real_N.at<int>(i, j) << endl;
-	//		}
-	//	}
-	//}
-	//waitKey(0);
+	Mat real_N;
+	Mat ima_N;
+	Mat h_tepm[] = {real,ima};
+	merge(h_tepm,2,h);
+	fourior_inverser(h, real_N, ima_N);
+	divide(real_N,real_N.rows*real_N.cols,real_N);
+	real_N.convertTo(real_N, CV_32S);
+	ima_N.convertTo(ima_N,CV_32S);
+	Scalar ss = sum(ima_N);
+	cout<< ss[0]<<endl;
+	for (size_t i = 0; i < real_N.rows; i++)
+	{
+	  for (size_t j = 0; j <real_N.cols; j++)
+		{
+			if (abs(real_N.at<int>(i,j))>0) {
+				cout << "row:" << i << "|col:" << j << ",value:="<< real_N.at<int>(i, j) << endl;
+			}
+		}
+	}
 
-	//二、正式滤波过程
+	//二、正式滤波过程\
 	//1)调整大小，补0
 	//2)计算F(U，V)求傅里叶变换
 	Mat dft_lena_filter;
@@ -161,20 +164,38 @@ void space2frequency()
 		}
 	}
 
-	//demarcate(real_src_filter);
-	real_src_filter.convertTo(real_src_filter, CV_8U);
 	image_cut(real_src_filter, re);
+	//demarcate(real_src_filter);
+
+	normalize(real_src_filter, real_src_filter, 1, 0, NORM_MINMAX);
+	//real_src_filter.convertTo(real_src_filter, CV_8U);
 	//8)裁剪图片
 	imshow("滤波后的图:", real_src_filter);
 
 	Laplace_cuda(dft_lena_filter_space, 3, 1);
-	dft_lena_filter_space.convertTo(dft_lena_filter_space, CV_8U);
-
+	//dft_lena_filter_space.convertTo(dft_lena_filter_space, CV_8U);
+	
+	dft_lena_filter_space.convertTo(dft_lena_filter_space,CV_32F);
+	normalize(dft_lena_filter_space, dft_lena_filter_space, 1, 0, NORM_MINMAX);
+	
 	//demarcate(dft_lena_filter_space);
 	imshow("空间滤波后的图:", dft_lena_filter_space);
 	waitKey(0);
 }
 
-void chapter4() {
-	space2frequency();
+//4.42震铃效应
+void bell_frequency() 
+{
+	filter_ILPF_bell(30);
+	filter_ILPF_test(10);
+	filter_ILPF_test(30);
+	filter_ILPF_test(60);
+	filter_ILPF_test(160);
+	filter_ILPF_test(460);
+}
+
+void chapter4()
+{    
+	//space2frequency();
+	bell_frequency();
 }

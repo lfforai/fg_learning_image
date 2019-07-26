@@ -21,6 +21,22 @@ void fre_angle_graph_opencv();
 void house_test(Mat& image);
 void image_cut(Mat &src_image, resize_tpye* mat_resize);
 void filter_ILPF_test(int rato);
+void filter_test();
+void filter_ILPF_bell(int rato);
+
+
+
+struct Met_oe_info {
+	int real_odd_or_even; //奇数=1，偶数=2,非奇数非偶=0,real
+	int ima_odd_or_even;//奇数=1，偶数=2,非奇数非偶=0，ima
+	int channls;//如果是单通道，结果默认放在real
+	void print() {
+		cout << "channls:"<< channls << endl;
+		cout << "real:"<< real_odd_or_even << endl;
+		if (channls>1)
+		   cout << "ima:" << ima_odd_or_even << endl;
+	}
+};
 
 //通用api
 Mat fourior_inverser(Mat &src_img, cv::Mat &real_img, cv::Mat &ima_img);
@@ -31,4 +47,7 @@ void amplitude_common(Mat &center_img);
 void angle_common(Mat &center_img);
 void angle_log(Mat &center_img);
 resize_tpye* graph_resize(Mat &image_src);
-void filter_test();
+Met_oe_info * Mat_is_odd_or_even(const Mat image);
+Mat amplitude_common_from_iamge(Mat &image);
+Mat amplitude_log_from_iamge(Mat &image);
+Mat image2_copy(const Mat& big, const Mat& less);
