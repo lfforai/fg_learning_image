@@ -52,3 +52,4 @@ Mat amplitude_common_from_iamge(Mat &image);
 Mat amplitude_log_from_iamge(Mat &image);
 Mat image2_copy(const Mat& big, const Mat& less);
 void fre2space_show(char * namefilter);
+//
