@@ -884,7 +884,6 @@ void filter_ILPF_bell(int rato)
 
 	mat_info=Mat_is_odd_or_even(filter_image2);
 	mat_info->print();
-	cout<<"---------image2---------------"<<endl;
 	
 	pow_i_j(filter_image);
 	
@@ -901,13 +900,12 @@ void filter_ILPF_bell(int rato)
 
 	mat_info = Mat_is_odd_or_even(real);
 	mat_info->print();
-	cout<<"--------------------1--------------------"<<endl;
 
 	////在空间域上扩充到1440大小Q*P
 	real=image2_copy(Mat::zeros(PQ->size_rows,PQ->size_cols,CV_32F),real);
 	mat_info = Mat_is_odd_or_even(real);
 	mat_info->print();
-	cout <<"-------------------2--------------------"<< endl;
+
 
 	fast_dft(real, real, ima);
 	pow_i_j(real);
