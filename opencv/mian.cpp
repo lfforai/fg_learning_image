@@ -115,7 +115,8 @@ void charter4() {
 }
 
 int main()
-{
+{ 
+ //fre2space_show("BLPF");
  chapter4();
  waitKey(0);
 }

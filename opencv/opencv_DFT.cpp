@@ -374,7 +374,6 @@ void filtering_Api(Mat &src_image, Mat &filter_image,int mode=0)
 	Met_oe_info*  de_ifo=Mat_is_odd_or_even(filter_image);
 	de_ifo->print();
 
-
 	if (mode == 1)//来自空间的滤波器
 	{   //出入的h（x，y）=filter_image都必须是实数和奇函数才能保证傅里叶变换以后在频域上是虚奇函数
 		filter_image.convertTo(filter_image,CV_32F);
@@ -444,6 +443,7 @@ void filtering_Api(Mat &src_image, Mat &filter_image,int mode=0)
 		cv::divide(ima_src_filter, ima_src_filter.rows*ima_src_filter.cols, ima_src_filter);
 		cout << "滤波器为非偶与奇函数，虚部可能不为0" << endl;
 	}
+
 	//7)由于原来的图像pow_i_j一次，现在还原回去，pow_i_j不改变相角和频谱
 	pow_i_j(real_src_filter);
 	//move_to_center(real_src_filter);
@@ -458,6 +458,13 @@ struct arg_ILPF {
 	int D0_radius;//半径
 	int rows;//长度
 	int cols;//宽度
+};//ILPF和GILF通用
+
+struct arg_BLPF {
+	int D0_radius;//半径
+	int rows;//长度
+	int cols;//宽度
+	float n=2;
 };
 
 //返回一个在频域上的滤波器
@@ -497,9 +504,157 @@ Mat set_filter_at_frespace(char * nameoffilter,void* arg)
 	   }
 	   
 	  }
+
+	if (strcmp(nameoffilter, "IHPF") == 0)
+	{
+		int  D0_radius = ((arg_ILPF*)arg)->D0_radius;//输入一个ILPF的D0的半径
+		//cout<<"半径是"<< ((arg_ILPF*)arg)->D0_radius <<endl;
+		int rows = ((arg_ILPF*)arg)->rows;
+		int cols = ((arg_ILPF*)arg)->cols;
+
+		int P_mide = rows / 2;
+		int Q_mide = cols / 2;
+
+		//定义内部函数
+		auto ifin = [](int x_rows, int y_cols, int P_mide, int  Q_mide, int D0_radius)->bool {
+			bool r = false;//包含在D0中
+			if ((int)sqrt(pow(x_rows - P_mide, 2.0) + pow(y_cols - Q_mide, 2.0)) >D0_radius)
+			{
+				r = true;
+				/*       cout << (int)sqrt(pow(x_rows - P_mide, 2.0) + pow(y_cols - Q_mide, 2.0)) <<"|"<<x_rows <<"|" <<y_cols << endl;
+					   cout << P_mide << "|" << Q_mide << "|" << endl;
+					   cout << D0_radius << endl;
+					   cout << "----------------------------" << endl;*/
+			}
+			return r;
+		};
+
+		result = Mat::zeros(rows, cols, CV_32F);
+
+		for (size_t i = 0; i < rows; i++)
+		{
+			for (size_t j = 0; j < cols; j++)
+			{
+				if (ifin(i, j, P_mide, Q_mide, D0_radius) == true)
+					result.at<float>(i, j) = 1.0;
+			}
+		}
+
+	}
+
+	if (strcmp(nameoffilter, "BLPF") == 0)
+	{
+		int  D0_radius = ((arg_BLPF*)arg)->D0_radius;//输入一个ILPF的D0的半径
+		int rows = ((arg_BLPF*)arg)->rows;
+		int cols = ((arg_BLPF*)arg)->cols;
+		int n= ((arg_BLPF*)arg)->n;
+
+		int P_mide = rows / 2;
+		int Q_mide = cols / 2;
+
+		//定义内部函数
+		auto BLPF_vlaue = [](int x_rows, int y_cols, int P_mide, int  Q_mide, int D0_radius,float n)->float
+		{
+			float r = 1.0 / (1.0 + pow(sqrt(pow(x_rows - P_mide, 2.0) + pow(y_cols - Q_mide, 2.0)) / D0_radius, 2.0*n));
+			return r;
+		};
+		
+		result = Mat::zeros(rows, cols, CV_32F);
+
+		for (size_t i = 0; i < rows; i++)
+		  {
+			for (size_t j = 0; j < cols; j++)
+			 {
+			    result.at<float>(i, j) = BLPF_vlaue(i,j, P_mide, Q_mide, D0_radius,n);
+			 }
+		  }
+	}
+
+	if (strcmp(nameoffilter, "BHPF") == 0)
+	{
+		int  D0_radius = ((arg_BLPF*)arg)->D0_radius;//输入一个ILPF的D0的半径
+		int rows = ((arg_BLPF*)arg)->rows;
+		int cols = ((arg_BLPF*)arg)->cols;
+		int n = ((arg_BLPF*)arg)->n;
+
+		int P_mide = rows / 2;
+		int Q_mide = cols / 2;
+
+		//定义内部函数
+		auto BLPF_vlaue = [](int x_rows, int y_cols, int P_mide, int  Q_mide, int D0_radius, float n)->float
+		{
+			float r = 1.0 / (1.0 + pow(D0_radius/sqrt(pow(x_rows - P_mide, 2.0) + pow(y_cols - Q_mide, 2.0)) , 2.0*n));
+			return r;
+		};
+
+		result = Mat::zeros(rows, cols, CV_32F);
+
+		for (size_t i = 0; i < rows; i++)
+		{
+			for (size_t j = 0; j < cols; j++)
+			{
+				result.at<float>(i, j) = BLPF_vlaue(i, j, P_mide, Q_mide, D0_radius, n);
+			}
+		}
+	}
+
+	if (strcmp(nameoffilter, "GLPF") == 0)
+	{   
+		int  D0_radius = ((arg_ILPF*)arg)->D0_radius;//输入一个ILPF的D0的半径
+        //cout<<"半径是"<< ((arg_ILPF*)arg)->D0_radius <<endl;
+		int rows = ((arg_ILPF*)arg)->rows;
+		int cols = ((arg_ILPF*)arg)->cols;
+
+		int P_mide = rows / 2;
+		int Q_mide = cols / 2;
+
+		//定义内部函数
+		auto GLPF_vlaue = [](int x_rows, int y_cols, int P_mide, int  Q_mide, int D0_radius)->float
+		{
+			float r = exp(-1*((pow(x_rows - P_mide, 2.0) + pow(y_cols - Q_mide, 2.0)))/(2 * pow(D0_radius, 2.0)));
+			return r;
+		};
+
+		result = Mat::zeros(rows, cols, CV_32F);
+
+		for (size_t i = 0; i < rows; i++)
+		{
+			for (size_t j = 0; j < cols; j++)
+			{
+				result.at<float>(i, j) = GLPF_vlaue(i, j, P_mide, Q_mide, D0_radius);
+			}
+		}
+	}
+
+	if (strcmp(nameoffilter, "GHPF") == 0)
+	{
+		int  D0_radius = ((arg_ILPF*)arg)->D0_radius;//输入一个ILPF的D0的半径
+		//cout<<"半径是"<< ((arg_ILPF*)arg)->D0_radius <<endl;
+		int rows = ((arg_ILPF*)arg)->rows;
+		int cols = ((arg_ILPF*)arg)->cols;
+
+		int P_mide = rows / 2;
+		int Q_mide = cols / 2;
+
+		//定义内部函数
+		auto GLPF_vlaue = [](int x_rows, int y_cols, int P_mide, int  Q_mide, int D0_radius)->float
+		{
+			float r =1-exp(-1 * ((pow(x_rows - P_mide, 2.0) + pow(y_cols - Q_mide, 2.0))) / (2 * pow(D0_radius, 2.0)));
+			return r;
+		};
+
+		result = Mat::zeros(rows, cols, CV_32F);
+
+		for (size_t i = 0; i < rows; i++)
+		{
+			for (size_t j = 0; j < cols; j++)
+			{
+				result.at<float>(i, j) = GLPF_vlaue(i, j, P_mide, Q_mide, D0_radius);
+			}
+		}
+	}
 	return result.clone();
 }
-
 
 //输入Mat查看是奇数函数还是偶函数
 //check  mat is  odd or even
@@ -611,8 +766,10 @@ Mat image2_copy(const Mat& big,const Mat& less)
 	return result.clone();
 }
 
+//显示图像rato放大缩小
 void image_show(const Mat& image,float rato,const char * c="图像") {
 	Mat a=image.clone();
+	a.convertTo(a, CV_32F);
 	int row = a.rows*rato;
 	int col = a.cols*rato;
 	resize(a, a,Size(row,col));
@@ -625,36 +782,105 @@ void image_show(const Mat& image,float rato,const char * c="图像") {
 	imshow(mark, a);
 }
 
-//二、opencv测试函数
-//ILPF_test_扩大震铃效果 
-void filter_ILPF_bell(int rato)
+
+//显示频率滤波器在空间中的图像
+void fre2space_show(char * namefilter) 
 {
-	stringstream ss;
-	Mat a = imread("C:/Users/Administrator/Desktop/opencv/a.png", IMREAD_GRAYSCALE);
-	Met_oe_info * mat_info = Mat_is_odd_or_even(a);
-	mat_info->print();
+	int rows = 688;
+	int cols = 688;
 
-	resize(a, a, Size(688, 688));
-	int rows = a.rows;
-	int cols = a.cols;
-	imshow("原图", a);
-    
-	resize_tpye* PQ = paddsize(a);
-	//cout << PQ->size_cols<< endl;
-
-	arg_ILPF * input_ILPE = (arg_ILPF*)malloc(sizeof(arg_ILPF));
 	//扩充到傅里叶变换要求的大小
 	int oph = getOptimalDFTSize(rows);
 	int opw = getOptimalDFTSize(cols);
-	
+
+
+	Mat filter_image;
+	if (strcmp(namefilter, "ILPF") == 0)
+	   {
+		arg_ILPF * input_ILPE = (arg_ILPF*)malloc(sizeof(arg_ILPF));
+		input_ILPE->D0_radius = 5;//宽度的5分之1为半径
+		input_ILPE->rows = oph;//维持原图大小
+		input_ILPE->cols = opw;//维持原图大小
+		
+		filter_image=set_filter_at_frespace("ILPF", input_ILPE);//ILPF和原图一样大
+	   }
+
+	if(strcmp(namefilter, "BLPF") == 0)
+	  {
+		arg_BLPF * input_BLPE = (arg_BLPF*)malloc(sizeof(arg_BLPF));
+		input_BLPE->D0_radius = 5;//宽度的5分之1为半径
+		input_BLPE->rows = oph;//维持原图大小
+		input_BLPE->cols = opw;//维持原图大小
+		input_BLPE->n = 2;
+		filter_image = set_filter_at_frespace("BLPF", input_BLPE);//ILPF和原图一样大
+	  }
+
+	Mat filter_image_copy = filter_image.clone();
+	pow_i_j(filter_image);
+
+	//从频域还原到空间中去
+	Mat real;
+	Mat ima;
+	Mat move_space = fourior_inverser(filter_image, real, ima);
+	divide(real, real.cols*real.rows, real);
+	divide(move_space, real.cols*real.rows, move_space);
+
+	Mat real_N;
+	Mat ima_N;
+	Mat space = fourior_inverser(filter_image_copy, real_N, ima_N);
+	divide(real_N, real.cols*real.rows, real_N);
+	divide(space, real.cols*real.rows,space);
+
+	//画出空间域
+	amplitude_common(move_space);
+	imshow("移动后的空间域：", move_space);
+	//image_show(move_space,1.0, "乘以pow_i_j的空间域：");
+
+	amplitude_common(space);
+	imshow("未移动空间域：", space);
+	//image_show(space, 1.0, "pow_i_j的空间域：");
+}
+
+//二、opencv测试函数
+//ILPF_test_扩大震铃效果 
+void filter_ILPF_bell(int rato)
+{   stringstream ss;
+	Mat a = imread("C:/Users/Administrator/Desktop/opencv/zw.png", IMREAD_GRAYSCALE);
+	Met_oe_info * mat_info = Mat_is_odd_or_even(a);
+	mat_info->print();
+
+	resize(a, a, Size(388, 388));
+	int rows = a.rows;
+	int cols = a.cols;
+	image_show(a,1, "原图");
+	//imshow("原图", a);
+    
+	resize_tpye* PQ = paddsize(a);
+	int oph = getOptimalDFTSize(rows);
+	int opw = getOptimalDFTSize(cols);
+
+	arg_ILPF * input_ILPE = (arg_ILPF*)malloc(sizeof(arg_ILPF));
+	//扩充到傅里叶变换要求的大小
 	input_ILPE->D0_radius = rato;//宽度的3分之1为半径
 	input_ILPE->rows = oph;//维持原图大小
 	input_ILPE->cols = opw;//维持原图大小
-	Mat filter_image = set_filter_at_frespace("ILPF", input_ILPE);//ILPF和原图一样大
-	//image_show(filter_image);
-    //cout<<filter_image.size()<<endl;
+
+	arg_BLPF * input_BLPE = (arg_BLPF*)malloc(sizeof(arg_BLPF));
+	//扩充到傅里叶变换要求的大小
+	input_BLPE->D0_radius = rato;//宽度的3分之1为半径
+	input_BLPE->rows = oph;//维持原图大小
+	input_BLPE->cols = opw;//维持原图大小
+	input_BLPE->n = 4;
+	
+	//Mat filter_image = set_filter_at_frespace("ILPF", input_ILPE);//ILPF和原图一样大
+	//Mat filter_image = set_filter_at_frespace("IHPF", input_ILPE);//ILPF和原图一样大
+	//Mat filter_image = set_filter_at_frespace("BLPF", input_BLPE);//ILPF和原图一样大
+	 Mat filter_image = set_filter_at_frespace("BHPF", input_BLPE);//ILPF和原图一样大
+	//Mat filter_image = set_filter_at_frespace("GLPF", input_ILPE);//ILPF和原图一样大
+	//Mat filter_image = set_filter_at_frespace("GHPF", input_ILPE);//ILPF和原图一样大
+
 	Mat filter_image2 =image2_copy(Mat::zeros(PQ->size_rows,PQ->size_cols,CV_32F), filter_image);
-	image_show(filter_image2,0.5,"留在频域图：");
+	image_show(filter_image2,0.5,"直接频域保留的频谱图：");
 
 	mat_info=Mat_is_odd_or_even(filter_image2);
 	mat_info->print();
@@ -662,53 +888,64 @@ void filter_ILPF_bell(int rato)
 	
 	pow_i_j(filter_image);
 	
-
-
-	////从频域还原到空间中去
+	//从频域还原到空间中去
 	Mat real;
 	Mat ima;
 	Mat space=fourior_inverser(filter_image, real, ima);
 	divide(real,real.cols*real.rows,real);
 	divide(space,real.cols*real.rows, space);
+	
 	//画出空间域
 	amplitude_common(space);
-	imshow("空间域：", space);
+	imshow("BLPF空间域图：", space);
 
-	//cout<<real.at<float>(14,45)<<"|"<< real.at<float>(real.rows-14,real.cols-45) <<endl;
-	//image_show(real);
 	mat_info = Mat_is_odd_or_even(real);
 	mat_info->print();
 	cout<<"--------------------1--------------------"<<endl;
-	//pow_i_j(filter_image);
 
 	////在空间域上扩充到1440大小Q*P
 	real=image2_copy(Mat::zeros(PQ->size_rows,PQ->size_cols,CV_32F),real);
-	//cout << real.at<float>(14, 45) << "|" << real.at<float>(real.rows - 14, real.cols - 45) << endl;
 	mat_info = Mat_is_odd_or_even(real);
 	mat_info->print();
-	cout << "--------------------2--------------------" << endl;
+	cout <<"-------------------2--------------------"<< endl;
 
-	//pow_i_j(real);
 	fast_dft(real, real, ima);
 	pow_i_j(real);
-    image_show(real,0.5,"空间谱图：");
+    image_show(real,0.5,"空间转换后的频谱图：");
 	
 	Mat a2 = a.clone();
 	filtering_Api(a,real, 0);
-	//imshow("回到空间后扩大震铃效果:", a);
+	//a.convertTo(a, CV_8U);
+	//imshow("回到空间扩展",a);
 	image_show(a,1,"回到空间扩展：");
 
+	//二值化
+	Mat result;
+	threshold(a, result, 0, 255, 0);
+	//result.convertTo(result, CV_8U);
+	//image_show(a2, 1, "只在频域拓展：");
+	image_show(result,1,"回到空间拓展二值化：");
+
+	//pow_i_j(filter_image2);
 	filtering_Api(a2, filter_image2, 0);
-	//imshow("只在频域上拓展效果:", a2);
+	//a2.convertTo(a2, CV_8U);
+	//imshow("只在频域拓展",a2);
 	image_show(a2,1,"只在频域拓展：");
+
+	//二值化
+	Mat result2;
+	threshold(a2, result2,0,255, 0);
+	//result.convertTo(result, CV_8U);
+	//image_show(a2, 1, "只在频域拓展：");
+	image_show(result2,1, "只在频域拓展二值化：");
 }
+
 
 void filter_ILPF_test(int rato)
 {
-	
 	 Mat a = imread("C:/Users/Administrator/Desktop/opencv/a.png", IMREAD_GRAYSCALE);
 	 resize(a, a, Size(688,688));
-	 imshow("原图",a);
+	 imshow("原图ILPF",a);
 	 //Mat a_fre_o = a.clone();
 	 //graph_resize(a_fre_o);
 	 //Mat a_fre=amplitude_log_from_iamge(a_fre_o);
@@ -732,6 +969,37 @@ void filter_ILPF_test(int rato)
 	 filtering_Api(a, filter_image,0);
 	 image_show(a,1,ret.c_str());
 	 //imshow("a滤波后的图"+mark+":",a);
+}
+
+void filter_BLPF_test(int rato,int n)
+{ 
+	Mat a = imread("C:/Users/Administrator/Desktop/opencv/a.png", IMREAD_GRAYSCALE);
+	resize(a, a, Size(688, 688));
+	imshow("原图BLPF", a);
+	//Mat a_fre_o = a.clone();
+	//graph_resize(a_fre_o);
+	//Mat a_fre=amplitude_log_from_iamge(a_fre_o);
+	//resize(a_fre, a_fre_o,Size(a_fre.cols / 2, a_fre.rows / 2));
+	//imshow("原图频谱图：", a_fre_o);
+
+	resize_tpye* PQ = paddsize(a);
+	//cout << PQ->size_cols<< endl;
+
+	arg_BLPF * input_ILPE = (arg_BLPF*)malloc(sizeof(arg_BLPF));
+	input_ILPE->D0_radius = rato;//宽度的3分之1为半径
+	input_ILPE->rows = PQ->size_rows;
+	input_ILPE->cols = PQ->size_cols;
+	input_ILPE->n = 2;
+
+	Mat filter_image = set_filter_at_frespace("BLPF", input_ILPE);
+	stringstream ss;
+	ss << rato;
+	string mark;
+	ss >> mark;
+	string ret = string("a滤波后的图") + mark;
+	filtering_Api(a, filter_image, 0);
+	image_show(a, 1, ret.c_str());
+	//imshow("a滤波后的图"+mark+":",a);
 }
 
 //一般输入进去的filter滤波器已经是中心化以后的了filter_need_center=false
@@ -774,6 +1042,7 @@ void filtering(Mat &src_image, Mat &filter_image,bool filter_need_center=false)
     image_cut(real_src_filter, image_info);
     src_image = real_src_filter.clone();
 }
+
 
 //简单滤波器实验
 void  simple_filter_test() {
@@ -928,7 +1197,6 @@ void fre_angle_graph_opencv() {
 	//magnitude(real, ima, real);
 	//normalize(real, real, 0, 255, NORM_MINMAX);
 	imshow("只保留频谱", real);
-
 
 	//二、只保留相位
 	complexI_only_angle.convertTo(complexI_only_angle, CV_32FC2);

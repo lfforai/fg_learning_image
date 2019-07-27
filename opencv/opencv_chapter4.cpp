@@ -183,15 +183,22 @@ void space2frequency()
 	waitKey(0);
 }
 
+
 //4.42’¡Â–ß”¶
 void bell_frequency() 
 {
-	filter_ILPF_bell(30);
-	filter_ILPF_test(10);
-	filter_ILPF_test(30);
-	filter_ILPF_test(60);
-	filter_ILPF_test(160);
-	filter_ILPF_test(460);
+	filter_ILPF_bell(50);
+	//filter_ILPF_test(10);
+	//filter_ILPF_test(30);
+	//filter_ILPF_test(60);
+	//filter_ILPF_test(160);
+	//filter_ILPF_test(460);
+
+	//filter_BLPF_test(10,2);
+	//filter_BLPF_test(30,2);
+	//filter_BLPF_test(60,2);
+	//filter_BLPF_test(160,2);
+	//filter_BLPF_test(460,2);
 }
 
 void chapter4()

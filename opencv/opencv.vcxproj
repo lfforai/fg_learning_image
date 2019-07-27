@@ -101,6 +101,7 @@
     <Image Include="..\..\..\..\Desktop\opencv\phobos.png" />
     <Image Include="..\..\..\..\Desktop\opencv\skeleton.png" />
     <Image Include="..\..\..\..\Desktop\opencv\street.png" />
+    <Image Include="..\..\..\..\Desktop\opencv\zw.png" />
     <Image Include="old.png" />
   </ItemGroup>
   <ItemGroup>

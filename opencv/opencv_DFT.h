@@ -23,7 +23,7 @@ void image_cut(Mat &src_image, resize_tpye* mat_resize);
 void filter_ILPF_test(int rato);
 void filter_test();
 void filter_ILPF_bell(int rato);
-
+void filter_BLPF_test(int rato, int n);
 
 
 struct Met_oe_info {
@@ -51,3 +51,4 @@ Met_oe_info * Mat_is_odd_or_even(const Mat image);
 Mat amplitude_common_from_iamge(Mat &image);
 Mat amplitude_log_from_iamge(Mat &image);
 Mat image2_copy(const Mat& big, const Mat& less);
+void fre2space_show(char * namefilter);
