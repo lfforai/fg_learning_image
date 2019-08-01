@@ -767,7 +767,7 @@ Mat image2_copy(const Mat& big,const Mat& less)
 }
 
 //显示图像rato放大缩小
-void image_show(const Mat& image,float rato,const char * c="图像") {
+void image_show(const Mat& image,float rato,const char * c) {
 	Mat a=image.clone();
 	a.convertTo(a, CV_32F);
 	int row = a.rows*rato;

@@ -112,6 +112,9 @@
     <ClInclude Include="opencv_chapter4.h">
       <Filter>opencv</Filter>
     </ClInclude>
+    <ClInclude Include="opencv_DWT.h">
+      <Filter>opencv</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="mian.cpp" />
@@ -128,6 +131,9 @@
       <Filter>opencv</Filter>
     </ClCompile>
     <ClCompile Include="opencv_chapter4.cpp">
+      <Filter>opencv</Filter>
+    </ClCompile>
+    <ClCompile Include="opencv_DWT.cpp">
       <Filter>opencv</Filter>
     </ClCompile>
   </ItemGroup>

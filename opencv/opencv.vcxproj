@@ -113,6 +113,7 @@
     <ClInclude Include="opencv_chapter3.h" />
     <ClInclude Include="opencv_chapter4.h" />
     <ClInclude Include="opencv_DFT.h" />
+    <ClInclude Include="opencv_DWT.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="cudatool.cu" />
@@ -121,6 +122,7 @@
     <ClCompile Include="opencv_chapter3.cpp" />
     <ClCompile Include="opencv_chapter4.cpp" />
     <ClCompile Include="opencv_DFT.cpp" />
+    <ClCompile Include="opencv_DWT.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\..\..\IdeaProjects\hutu\.idea\Ringing_bell434 .py" />

@@ -4,6 +4,7 @@
 #include "math_cuda.cuh"
 #include "opencv_chapter3.h"
 #include "opencv_chapter4.h"
+#include "opencv_DWT.h"
 
 //系统包
 #include <opencv2/opencv.hpp>
@@ -117,7 +118,9 @@ void charter4() {
 int main()
 { 
  //fre2space_show("BLPF");
- chapter4();
+ //chapter4();
+ float h[8] = { 0.23037781,0.714846577,0.6308076,-0.02798376,-0.1870341,0.03084138,0.03288301,-0.01059740 };
+ base_code("C:/Users/Administrator/Desktop/opencv/lena.jpg",h,8);
  waitKey(0);
 }
 
