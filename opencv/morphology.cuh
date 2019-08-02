@@ -39,27 +39,24 @@ struct se_tpye {
 		cudaGetDeviceCount(&deviceCount);
 		if (deviceCount > 0)
 		{
-			cout<<"---------------------"<<endl;
 			cudaMallocManaged((void**)&point_offset, sizeof(Point_gpu)*length);
 			cudaMallocManaged((void**)&data, sizeof(uchar)*length);
-	/*		for (size_t i = 0; i < length; i++)
-			{
-				data[i] = 255;
-			}*/
+
 			this->center.x = 0.0;//cols
 			this->center.y = 0.0;//rows
 			cudaMemcpy(point_offset, point_offset_N, sizeof(Point_gpu)*length,cudaMemcpyDefault);
 			cudaMemcpy(data, data_N,  sizeof(uchar)*length, cudaMemcpyDefault);
-			for (size_t i = 0; i < length; i++)
+		/*	for (size_t i = 0; i < length; i++)
 			{
 				cout<<point_offset[i].y<<endl;
 				cout<<point_offset[i].x<< endl;
-				printf("%u \n",data[i]);
+				printf("value:%u \n",data[i]);
 				cout<<"---------------"<<endl;
-			}
+			}*/
 		}
 		else {
 			//目前没有cpu版
+			cout<<"gpu no use!"<<endl;
 		}
 	}
 };
