@@ -46,6 +46,12 @@
     <Image Include="..\..\..\..\Desktop\opencv\zw.png">
       <Filter>piture</Filter>
     </Image>
+    <Image Include="font1.png">
+      <Filter>piture</Filter>
+    </Image>
+    <Image Include="font.png">
+      <Filter>piture</Filter>
+    </Image>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="cufft">
@@ -86,6 +92,9 @@
     <CudaCompile Include="image_rotate.cu">
       <Filter>rotate</Filter>
     </CudaCompile>
+    <CudaCompile Include="morphology.cu">
+      <Filter>opencv</Filter>
+    </CudaCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="cufft.cuh">
@@ -113,6 +122,9 @@
       <Filter>opencv</Filter>
     </ClInclude>
     <ClInclude Include="opencv_DWT.h">
+      <Filter>opencv</Filter>
+    </ClInclude>
+    <ClInclude Include="morphology.cuh">
       <Filter>opencv</Filter>
     </ClInclude>
   </ItemGroup>

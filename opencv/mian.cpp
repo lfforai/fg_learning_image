@@ -5,6 +5,7 @@
 #include "opencv_chapter3.h"
 #include "opencv_chapter4.h"
 #include "opencv_DWT.h"
+#include "morphology.cuh"
 
 //系统包
 #include <opencv2/opencv.hpp>
@@ -115,12 +116,23 @@ void charter4() {
 	chapter4();
 }
 
+//八、第七章的各种测试
+void charter7() {
+	float h[8] = { 0.23037781,0.714846577,0.6308076,-0.02798376,-0.1870341,0.03084138,0.03288301,-0.01059740 };
+	base_code("C:/Users/Administrator/Desktop/opencv/wall.jpg", h, 8);
+}
+
+//九、第九章的各种测试
+void charter9() {
+
+}
+
 int main()
-{ 
- //fre2space_show("BLPF");
- //chapter4();
- float h[8] = { 0.23037781,0.714846577,0.6308076,-0.02798376,-0.1870341,0.03084138,0.03288301,-0.01059740 };
- base_code("C:/Users/Administrator/Desktop/opencv/lena.jpg",h,8);
+{
+ //charter7();
+ morphology_test(3,3,1);
+ morphology_test(12, 12,1);
+ morphology_test(15, 15,1);
  waitKey(0);
 }
 

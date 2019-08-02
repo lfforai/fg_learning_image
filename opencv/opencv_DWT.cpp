@@ -78,6 +78,7 @@ void base_code(char *path, float* h, int len) {
 
 	float * h_1 = (float *)malloc(len*sizeof(float));
 	memcpy(h_1, h, len * sizeof(float));
+	//exchange(h_1, h_0, len);
 	pow_i(h_1, len);
 
 	Mat h0 = FRI(image_f, h_0, 8, 0);

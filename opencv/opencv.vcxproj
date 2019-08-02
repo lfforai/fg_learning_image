@@ -86,6 +86,7 @@
     <CudaCompile Include="image_scale0.cu" />
     <CudaCompile Include="image_scale1.cu" />
     <CudaCompile Include="image_scale2.cu" />
+    <CudaCompile Include="morphology.cu" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="..\..\..\..\Desktop\I.png" />
@@ -102,6 +103,8 @@
     <Image Include="..\..\..\..\Desktop\opencv\skeleton.png" />
     <Image Include="..\..\..\..\Desktop\opencv\street.png" />
     <Image Include="..\..\..\..\Desktop\opencv\zw.png" />
+    <Image Include="font.png" />
+    <Image Include="font1.png" />
     <Image Include="old.png" />
   </ItemGroup>
   <ItemGroup>
@@ -110,6 +113,7 @@
     <ClInclude Include="image_rotate.cuh" />
     <ClInclude Include="image_scale.cuh" />
     <ClInclude Include="math_cuda.cuh" />
+    <ClInclude Include="morphology.cuh" />
     <ClInclude Include="opencv_chapter3.h" />
     <ClInclude Include="opencv_chapter4.h" />
     <ClInclude Include="opencv_DFT.h" />

@@ -772,7 +772,7 @@ void image_show(const Mat& image,float rato,const char * c) {
 	a.convertTo(a, CV_32F);
 	int row = a.rows*rato;
 	int col = a.cols*rato;
-	resize(a, a,Size(row,col));
+	resize(a, a,Size(col,row));
 	normalize(a,a, 1, 0, NORM_MINMAX);
 	//demarcate(dft_lena_filter_space);
 	stringstream ss;
@@ -845,7 +845,7 @@ void fre2space_show(char * namefilter)
 //ILPF_test_扩大震铃效果 
 void filter_ILPF_bell(int rato)
 {   stringstream ss;
-	Mat a = imread("C:/Users/Administrator/Desktop/opencv/zw.png", IMREAD_GRAYSCALE);
+	Mat a = imread("C:/Users/Administrator/Desktop/opencv/wall.jpg", IMREAD_GRAYSCALE);
 	Met_oe_info * mat_info = Mat_is_odd_or_even(a);
 	mat_info->print();
 
