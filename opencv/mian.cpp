@@ -130,9 +130,10 @@ void charter9() {
 int main()
 {
  //charter7();
-  morphology_test(12,10,1);
+  //morphology_test(12,10,1);
   //morphology_test(4, 4,1);
  //morphology_test(15, 15,1);
+ chapter9();
  waitKey(0);
 }
 

@@ -52,6 +52,9 @@
     <Image Include="font.png">
       <Filter>piture</Filter>
     </Image>
+    <Image Include="man.png">
+      <Filter>piture</Filter>
+    </Image>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="cufft">

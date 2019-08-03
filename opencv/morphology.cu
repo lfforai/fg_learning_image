@@ -10,7 +10,7 @@ cudaChannelFormatDesc cuDesc_corrode = cudaCreateChannelDesc<uchar>();
 
 
 //图像腐蚀change center
-__device__ uchar change_center(int x, int y, Point_gpu* point_gpu, int len) {
+__device__ uchar change_center(int x, int y, Point_gpu* point_gpu,uchar* data,int len) {
 	int x_N;
 	int y_N;
 	uchar result = 255;
@@ -18,7 +18,7 @@ __device__ uchar change_center(int x, int y, Point_gpu* point_gpu, int len) {
 	{
 		x_N = (int)(point_gpu[i].x + x);
 		y_N = (int)(point_gpu[i].y + y);
-		if (tex2D(refTex_corrode, x_N, y_N) < 255)//每个point_gpu位置上的像素都需要是255，否则该点将被腐蚀点
+		if (tex2D(refTex_corrode, x_N, y_N) < 255 && data[i]==255)//每个point_gpu位置上的像素都需要是255，否则该点将被腐蚀点
 		{
 			result = 0;
 			break;
@@ -28,14 +28,14 @@ __device__ uchar change_center(int x, int y, Point_gpu* point_gpu, int len) {
 }
 
 //图像腐蚀
-__global__ void corrodeKerkel(int* pDstImgData, int imgHeight_des_d, int imgWidth_des_d,Point_gpu* point_gpu,int len)
+__global__ void corrodeKerkel(int* pDstImgData, int imgHeight_des_d, int imgWidth_des_d,Point_gpu* point_gpu,uchar* data,int len)
 	{   //printf("threadIdx,x=%d",threadIdx.x);
 		const int tidx = blockDim.x * blockIdx.x + threadIdx.x;
 		const int tidy = blockDim.y * blockIdx.y + threadIdx.y;
 		if (tidx < imgWidth_des_d && tidy < imgHeight_des_d)
 		{
 			int idx = tidy * imgWidth_des_d + tidx;
-			pDstImgData[idx] = (int)change_center(tidx,tidy,point_gpu,len);
+			pDstImgData[idx] = (int)change_center(tidx,tidy,point_gpu,data,len);
 			//printf("value=%u,%d,%d,%f,%f \n", pDstImgData[idx], x1, y2, x_des, y_des);
 		}
 	}
@@ -54,7 +54,7 @@ __device__ void change_expand(int* pDstImgData,int x, int y, int imgWidth_des_d,
 		{   idx = (int)(y_N * imgWidth_des_d + x_N);
 		
 			 // printf("%u,%u \n", pDstImgData[idx], data[i]);
-			if (tex2D(refTex_corrode, x_N, y_N)==255 && data[i] == 0)
+			if (pDstImgData[idx]==0 && tex2D(refTex_corrode, x_N, y_N)==255 && data[i] == 0)
 			{
 				int a =255;
 				atomicExch(pDstImgData+idx,a);
@@ -85,14 +85,14 @@ __global__ void expandKerkel(int* pDstImgData, int imgHeight_des_d, int imgWidth
 }
 
 //mode=0 腐蚀，1=膨胀
-void morphology_gpu(char * path,int len,Point_gpu*  point_offset_N,uchar* data ,int mode) {
+Mat morphology_gpu(char * path,int len,Point_gpu*  point_offset_N,uchar* data ,int mode) {
 	se_tpye * se_obj = (se_tpye*)malloc(sizeof(se_tpye));
 	se_obj->init(len, point_offset_N,data);
 
 	Mat Lena = imread(path);
 	cvtColor(Lena, Lena, COLOR_BGR2GRAY);//转换为灰度图
 	threshold(Lena, Lena, 100, 255, 0);
-	image_show(Lena,0.5,"原图");
+	image_show(Lena,1,"原图");
 	
     int x_rato_less = 1.0;
 	int y_rato_less = 1.0;
@@ -128,9 +128,9 @@ void morphology_gpu(char * path,int len,Point_gpu*  point_offset_N,uchar* data ,
 	dim3 grid((imgWidth_des_less + block.x - 1) / block.x, (imgHeight_des_less + block.y - 1) / block.y);
 
 	if (mode==0)
-	   corrodeKerkel << <grid, block >> > (pDstImgData1,imgHeight_des_less,imgWidth_des_less,se_obj->point_offset,len);
+	   corrodeKerkel << <grid, block >> > (pDstImgData1,imgHeight_des_less,imgWidth_des_less,se_obj->point_offset,se_obj->data,len);
 	if (mode==1)
-	   expandKerkel << <grid, block >> > (pDstImgData1, imgHeight_des_less, imgWidth_des_less, se_obj->point_offset, se_obj->data,len);
+	   expandKerkel << <grid, block >> > (pDstImgData1, imgHeight_des_less, imgWidth_des_less, se_obj->point_offset,se_obj->data,len);
 	cudaDeviceSynchronize();
 
 	//从GPU拷贝输出数据到CPU
@@ -142,10 +142,11 @@ void morphology_gpu(char * path,int len,Point_gpu*  point_offset_N,uchar* data ,
 	string mark;
 	ss >> mark;
 	string ret = string("腐蚀以后的图") + mark;
-	image_show(dstImg1,0.5,ret.c_str());
+	image_show(dstImg1,1,ret.c_str());
 	//namedWindow("cuda_point最近插值：", WINDOW_NORMAL);
 	//imshow("腐蚀以后的图像：", dstImg1);
 	//imwrite("C:/Users/Administrator/Desktop/图片/Gray_Image0.jpg", dstImg1);
+	return dstImg1.clone();
 }
 
 //M是长，N是宽
@@ -212,4 +213,141 @@ void morphology_test(int M, int N,int mode)
 	  uchar* data = set_Point_data(M, N);
 	  morphology_gpu("C:/Users/Administrator/Desktop/opencv/font.png", M*N, point_offset_N, data, 1);
 	}
+
+}
+
+//2、二值图像的逻辑集合运算,默认二值是由255和0构成
+Mat AND_two(const Mat& A, const Mat& B,uchar min,uchar max) {//交函数
+	Mat A_N =A.clone();
+	A_N.convertTo(A_N, CV_8U);
+	Mat B_N =B.clone();
+	B_N.convertTo(B_N, CV_8U);
+	Mat result = Mat::zeros(A_N.size(), CV_8U);
+
+	int N = A.cols;
+	int M = A.rows;
+	for (size_t i = 0; i <M; i++)
+		{  for (size_t j = 0; j <N; j++)
+			   { 
+				 if (A_N.at<uchar>(i, j) == max && B_N.at<uchar>(i, j) == max)
+				 {
+					 result.at<uchar>(i, j) = max;
+
+				 }
+				 else {
+					 result.at<uchar>(i, j) = min;
+				 }
+			   }
+		  }
+
+	return result.clone();
+}
+
+Mat OR_two(const Mat& A, const Mat& B, uchar min, uchar max) {//并操作
+	Mat A_N = A.clone();
+	A_N.convertTo(A_N, CV_8U);
+	Mat B_N = B.clone();
+	B_N.convertTo(B_N, CV_8U);
+	Mat result= Mat::zeros(A_N.size(), CV_8U);
+
+	int N = A.cols;
+	int M = A.rows;
+	for (size_t i = 0; i < M; i++)
+	{
+		for (size_t j = 0; j < N; j++)
+		{
+			if (A_N.at<uchar>(i, j) == min && B_N.at<uchar>(i, j) == min)
+			{
+				result.at<uchar>(i, j) = min;
+
+			}
+			else {
+				result.at<uchar>(i, j) = max;
+			}
+		}
+	}
+
+	return result.clone();
+}
+
+Mat NOT_two(const Mat& A, uchar min, uchar max) {//补操作
+	Mat A_N = A.clone();
+	A_N.convertTo(A_N, CV_8U);
+
+	Mat result=Mat::zeros(A_N.size(),CV_8U);
+
+	int N = A.cols;
+	int M = A.rows;
+	for (size_t i = 0; i < M; i++)
+	{
+		for (size_t j = 0; j < N; j++)
+		{
+			if (A_N.at<uchar>(i, j)== min)
+			{
+				result.at<uchar>(i, j) = max;
+
+			}
+			else {
+				result.at<uchar>(i, j) = min;
+			}
+		}
+	}
+
+	return result.clone();
+}
+
+Mat AND_NOT_two(const Mat& A, const Mat& B, uchar min, uchar max) {//B补运算，再与A交
+	Mat mide = NOT_two(B,0,255);
+	image_show(mide, 1, "mide");
+	Mat result = AND_two(A,mide,0,255);
+	return result.clone();
+}
+
+Mat XOR_two(const Mat& A, const Mat& B, uchar min , uchar max) {//异或操作, 等于：A和B并集后剔除A交B
+	Mat A_N = A.clone();
+	A_N.convertTo(A_N, CV_8U);
+	Mat B_N = B.clone();
+	B_N.convertTo(B_N, CV_8U);
+	Mat result;
+	result.convertTo(result, CV_8U);
+
+	int N = A.cols;
+	int M = A.rows;
+	for (size_t i = 0; i < M; i++)
+	{
+		for (size_t j = 0; j < N; j++)
+		{
+			if (A_N.at<uchar>(i, j)!=B_N.at<uchar>(i, j))
+			{
+				result.at<uchar>(i, j) = max;
+
+			}
+			else {
+				result.at<uchar>(i, j) = min;
+			}
+		}
+	}
+	return result.clone();
+}
+
+//例9.5
+void man_test() {
+	Mat Lena = imread("C:/Users/Administrator/Desktop/opencv/man.png");
+	cvtColor(Lena, Lena, COLOR_BGR2GRAY);//转换为灰度图
+	threshold(Lena, Lena, 100, 255, 0);
+	//image_show(Lena,1, "原图");
+	
+	int M = 5;
+	int N = 5;
+	Point_gpu* point=set_Point_gpu(M,N);
+	uchar* data=set_Point_data(M, N);
+	Mat mide=morphology_gpu("C:/Users/Administrator/Desktop/opencv/man.png", M*N,point, data, 0);
+   
+	Mat result=AND_NOT_two(Lena, mide,0,255);
+	result.convertTo(result, CV_32F);
+	image_show(result,1,"结果");
+}
+
+void chapter9() {
+	man_test();
 }

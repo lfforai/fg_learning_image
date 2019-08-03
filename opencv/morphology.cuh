@@ -61,5 +61,11 @@ struct se_tpye {
 	}
 };
 
+Mat AND_two(const Mat& A, const Mat& B, uchar min = 0, uchar max = 255);
+Mat OR_two(const Mat& A, const Mat& B, uchar min = 0, uchar max = 255);
+Mat NOT_two(const Mat& A, uchar min = 0, uchar max = 255);
+Mat AND_NOT_two(const Mat& A, const Mat& B, uchar min = 0, uchar max = 255);
+Mat XOR_two(const Mat& A, const Mat& B, uchar min = 0, uchar max = 255);
 Point_gpu* set_Point_gpu(int M, int N);
 void morphology_test(int M, int N,int mode);
+void chapter9();

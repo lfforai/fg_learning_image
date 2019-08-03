@@ -105,6 +105,7 @@
     <Image Include="..\..\..\..\Desktop\opencv\zw.png" />
     <Image Include="font.png" />
     <Image Include="font1.png" />
+    <Image Include="man.png" />
     <Image Include="old.png" />
   </ItemGroup>
   <ItemGroup>
