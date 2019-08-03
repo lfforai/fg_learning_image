@@ -35,7 +35,8 @@ __global__ void corrodeKerkel(int* pDstImgData, int imgHeight_des_d, int imgWidt
 		if (tidx < imgWidth_des_d && tidy < imgHeight_des_d)
 		{
 			int idx = tidy * imgWidth_des_d + tidx;
-			pDstImgData[idx] = (int)change_center(tidx,tidy,point_gpu,data,len);
+			if(tex2D(refTex_corrode,tidx,tidy)==255)
+			   pDstImgData[idx] = (int)change_center(tidx,tidy,point_gpu,data,len);
 			//printf("value=%u,%d,%d,%f,%f \n", pDstImgData[idx], x1, y2, x_des, y_des);
 		}
 	}
@@ -46,26 +47,16 @@ __device__ void change_expand(int* pDstImgData,int x, int y, int imgWidth_des_d,
 	int x_N;
 	int y_N;
 	int idx;
+	int a;
 	for (int i = 0; i < len; i++)
 	{   
 		x_N = (int)(point_gpu[i].x + x);
 		y_N = (int)(point_gpu[i].y + y);
-		if (-1 < x_N && x_N < imgWidth_des_d && -1 < y_N && y_N < imgHeight_des_d)
+		a = (int)tex2D(refTex_corrode, x_N, y_N);
+		if (~(y_N == 0 && x_N ==0) && -1 < x_N && x_N < imgWidth_des_d && -1 < y_N && y_N < imgHeight_des_d && data[i]==255 && a==0)
 		{   idx = (int)(y_N * imgWidth_des_d + x_N);
-		
-			 // printf("%u,%u \n", pDstImgData[idx], data[i]);
-			if (pDstImgData[idx]==0 && tex2D(refTex_corrode, x_N, y_N)==255 && data[i] == 0)
-			{
-				int a =255;
-				atomicExch(pDstImgData+idx,a);
-				//printf("a: \n");
-			   /* pDstImgData[idx] = data[i];*/
-			}
-			else {
-				int a = (int)data[i];
-				atomicExch(pDstImgData + idx, a);
-				//pDstImgData[idx] =(int) data[i];
-			}
+		    a = 255;
+			atomicExch(pDstImgData + idx, a);
 		}
 	}
 }
@@ -94,13 +85,12 @@ Mat morphology_gpu(char * path,int len,Point_gpu*  point_offset_N,uchar* data ,i
 	threshold(Lena, Lena, 100, 255, 0);
 	image_show(Lena,1,"原图");
 	
-    int x_rato_less = 1.0;
+	int x_rato_less = 1.0;
 	int y_rato_less = 1.0;
 
 	int imgWidth_src = Lena.cols;//原图像宽
 	int imgHeight_src = Lena.rows;//原图像高
 	int channels = Lena.channels();
-
 
 	int imgWidth_des_less = floor(imgWidth_src * x_rato_less);//缩小图像
 	int imgHeight_des_less = floor(imgHeight_src * y_rato_less);//缩小图像
@@ -118,19 +108,21 @@ Mat morphology_gpu(char * path,int len,Point_gpu*  point_offset_N,uchar* data ,i
 	t = cudaMemcpyToArray(cuArray_corrode, 0, 0, Lena.data, imgWidth_src * imgHeight_src * sizeof(uchar), cudaMemcpyHostToDevice);
 
 	//输出放缩以后在cpu上图像
+	Lena.convertTo(Lena, CV_32S);
 	Mat dstImg1 = Mat::zeros(imgHeight_des_less, imgWidth_des_less, CV_32SC1);//缩小
 
 	//输出放缩以后在cuda上的图像
 	int* pDstImgData1 = NULL;
 	t = cudaMalloc(&pDstImgData1, imgHeight_des_less * imgWidth_des_less * sizeof(int));
+	t = cudaMemcpy(pDstImgData1, Lena.data, imgWidth_des_less * imgHeight_des_less * sizeof(int)*channels, cudaMemcpyHostToDevice);
 
 	dim3 block(16, 16);
 	dim3 grid((imgWidth_des_less + block.x - 1) / block.x, (imgHeight_des_less + block.y - 1) / block.y);
 
-	if (mode==0)
-	   corrodeKerkel << <grid, block >> > (pDstImgData1,imgHeight_des_less,imgWidth_des_less,se_obj->point_offset,se_obj->data,len);
-	if (mode==1)
-	   expandKerkel << <grid, block >> > (pDstImgData1, imgHeight_des_less, imgWidth_des_less, se_obj->point_offset,se_obj->data,len);
+	if (mode == 0)
+		corrodeKerkel << <grid, block >> > (pDstImgData1, imgHeight_des_less, imgWidth_des_less, se_obj->point_offset, se_obj->data, len);
+	if (mode == 1)
+		expandKerkel << <grid, block >> > (pDstImgData1, imgHeight_des_less, imgWidth_des_less, se_obj->point_offset, se_obj->data, len);
 	cudaDeviceSynchronize();
 
 	//从GPU拷贝输出数据到CPU
@@ -142,7 +134,72 @@ Mat morphology_gpu(char * path,int len,Point_gpu*  point_offset_N,uchar* data ,i
 	string mark;
 	ss >> mark;
 	string ret = string("腐蚀以后的图") + mark;
-	image_show(dstImg1,1,ret.c_str());
+	image_show(dstImg1, 1, ret.c_str());
+	//namedWindow("cuda_point最近插值：", WINDOW_NORMAL);
+	//imshow("腐蚀以后的图像：", dstImg1);
+	//imwrite("C:/Users/Administrator/Desktop/图片/Gray_Image0.jpg", dstImg1);
+	return dstImg1.clone();
+}
+
+//mode=0 腐蚀，1=膨胀
+Mat morphology_gpu_Mat(const Mat& image, int len, Point_gpu*  point_offset_N, uchar* data, int mode) {
+	se_tpye * se_obj = (se_tpye*)malloc(sizeof(se_tpye));
+	se_obj->init(len, point_offset_N, data);
+
+	Mat Lena = image.clone();
+	Lena.convertTo(Lena, CV_8U);
+	//image_show(Lena, 1, "原图");
+
+	int x_rato_less = 1.0;
+	int y_rato_less = 1.0;
+
+	int imgWidth_src = Lena.cols;//原图像宽
+	int imgHeight_src = Lena.rows;//原图像高
+	int channels = Lena.channels();
+
+	int imgWidth_des_less = floor(imgWidth_src * x_rato_less);//缩小图像
+	int imgHeight_des_less = floor(imgHeight_src * y_rato_less);//缩小图像
+
+	//设置1纹理属性
+	cudaError_t t;
+	refTex_corrode.addressMode[0] = cudaAddressModeBorder;
+	refTex_corrode.addressMode[1] = cudaAddressModeBorder;
+	refTex_corrode.normalized = false;
+	refTex_corrode.filterMode = cudaFilterModePoint;
+	//绑定cuArray到纹理
+	cudaMallocArray(&cuArray_corrode, &cuDesc_corrode, imgWidth_src, imgHeight_src);
+	t = cudaBindTextureToArray(refTex_corrode, cuArray_corrode);
+	//拷贝数据到cudaArray
+	t = cudaMemcpyToArray(cuArray_corrode, 0, 0, Lena.data, imgWidth_src * imgHeight_src * sizeof(uchar), cudaMemcpyHostToDevice);
+
+	//输出放缩以后在cpu上图像
+	Lena.convertTo(Lena, CV_32S);
+	Mat dstImg1 = Mat::zeros(imgHeight_des_less, imgWidth_des_less, CV_32SC1);//缩小
+
+	//输出放缩以后在cuda上的图像
+	int* pDstImgData1 = NULL;
+	t = cudaMalloc(&pDstImgData1,imgHeight_des_less * imgWidth_des_less * sizeof(int)); 
+	t = cudaMemcpy(pDstImgData1,Lena.data,imgWidth_des_less * imgHeight_des_less * sizeof(int)*channels, cudaMemcpyHostToDevice);
+
+	dim3 block(16, 16);
+	dim3 grid((imgWidth_des_less + block.x - 1) / block.x, (imgHeight_des_less + block.y - 1) / block.y);
+
+	if (mode == 0)
+		corrodeKerkel << <grid, block >> > (pDstImgData1, imgHeight_des_less, imgWidth_des_less, se_obj->point_offset, se_obj->data, len);
+	if (mode == 1)
+		expandKerkel << <grid, block >> > (pDstImgData1, imgHeight_des_less, imgWidth_des_less, se_obj->point_offset, se_obj->data, len);
+	cudaDeviceSynchronize();
+
+	//从GPU拷贝输出数据到CPU
+	t = cudaMemcpy(dstImg1.data, pDstImgData1, imgWidth_des_less * imgHeight_des_less * sizeof(int)*channels, cudaMemcpyDeviceToHost);
+	cudaFree(cuArray_corrode);
+	cudaFree(pDstImgData1);
+	stringstream ss;
+	ss << len;
+	string mark;
+	ss >> mark;
+	string ret = string("腐蚀以后的图") + mark;
+	image_show(dstImg1, 1, ret.c_str());
 	//namedWindow("cuda_point最近插值：", WINDOW_NORMAL);
 	//imshow("腐蚀以后的图像：", dstImg1);
 	//imwrite("C:/Users/Administrator/Desktop/图片/Gray_Image0.jpg", dstImg1);
@@ -184,7 +241,7 @@ uchar* set_Point_data(int M, int N) {
 	return data;
 }
 
-//膨胀用
+//非标准矩阵核，膨胀用
 uchar* set_Point_data_pz(int M, int N) {
 	uchar*  data = (uchar*)malloc(sizeof(uchar)* M*N);
     data[0] = 0;
@@ -209,9 +266,9 @@ void morphology_test(int M, int N,int mode)
 	
 	if(mode == 1)
 	{ Point_gpu * point_offset_N =set_Point_gpu(M, N);;
-	  //uchar* data = set_Point_data_pz(M,N);
-	  uchar* data = set_Point_data(M, N);
-	  morphology_gpu("C:/Users/Administrator/Desktop/opencv/font.png", M*N, point_offset_N, data, 1);
+	  uchar* data = set_Point_data_pz(M,N);
+	  //uchar* data = set_Point_data(M, N);
+	  morphology_gpu("C:/Users/Administrator/Desktop/opencv/font1.png", M*N, point_offset_N, data, 1);
 	}
 
 }
@@ -340,7 +397,7 @@ void man_test() {
 	int M = 5;
 	int N = 5;
 	Point_gpu* point=set_Point_gpu(M,N);
-	uchar* data=set_Point_data(M, N);
+	uchar* data=set_Point_data(M,N);
 	Mat mide=morphology_gpu("C:/Users/Administrator/Desktop/opencv/man.png", M*N,point, data, 0);
    
 	Mat result=AND_NOT_two(Lena, mide,0,255);
@@ -348,6 +405,68 @@ void man_test() {
 	image_show(result,1,"结果");
 }
 
+//例9.6
+void remove_test() {
+	Mat Lena = imread("C:/Users/Administrator/Desktop/opencv/yuan.png");
+	cvtColor(Lena, Lena, COLOR_BGR2GRAY);//转换为灰度图
+	threshold(Lena, Lena, 100, 255, 0);
+	image_show(Lena,1, "原图");
+
+	//Mat X=Mat::zeros(Lena.size(),CV_8U);
+	int M = 3;
+	int N = 3;
+	cv::Point p;//用image watch 查到的点
+	p.x = 93;
+	p.y = 49;
+	Mat X = Mat::zeros(Lena.size(), CV_8U);
+	X.at<uchar>(p.y,p.x)=255;
+
+	Point_gpu* point = set_Point_gpu(M, N);
+	uchar* data = set_Point_data_pz(M, N);
+	//char* file = "C:/Users/Administrator/Desktop/opencv/yuan.png";
+	Mat mide = morphology_gpu_Mat(X, M*N, point, data, 1);
+	Mat result = AND_NOT_two(mide, Lena, 0, 255);
+
+	for (size_t i = 0; i < 20; i++)
+	{ 	mide = morphology_gpu_Mat(result, M*N, point, data, 1);
+		result = AND_NOT_two(mide, Lena, 0, 255);
+	}
+
+	result=OR_two(result, Lena);
+	result.convertTo(result, CV_32F);
+	image_show(result, 1, "结果");
+}
+
+void test() {
+	int M = 3;
+	int N = 3;
+	
+	Mat X = Mat::zeros(Size(5, 5), CV_8U); 
+	X.at<uchar>(0, 1) = 255;
+	X.at<uchar>(0, 0) = 255;
+	X.at<uchar>(0, 2) = 255;
+	X.at<uchar>(1, 1) = 255;
+	//X.at<uchar>(2, 4) = 255;
+	//X.at<uchar>(3, 3) = 255;
+	cout <<X<< endl;
+	Point_gpu* point = set_Point_gpu(M, N);
+	uchar* data = set_Point_data_pz(M, N);
+	Mat mide = morphology_gpu_Mat(X, M*N, point, data, 1);
+	cout << mide << endl;
+	cout <<"-------------------------"<< endl;
+	for (size_t i = 0; i < 1; i++)
+	{
+	   mide=morphology_gpu_Mat(mide, M*N, point, data, 1);
+	}
+	//mide.convertTo(mide, CV_8U);
+	cout<<mide<<endl;
+	cout << "-------------------------" << endl;
+}
+
 void chapter9() {
-	man_test();
+	//test();//测试morphology_gpu是否正确
+	//morphology_test(5, 5, 0);//例子9.1
+	//morphology_test(3, 3, 1);//例子9.1
+	//man_test();//例子9.5
+	remove_test();//例子9.6
 }
