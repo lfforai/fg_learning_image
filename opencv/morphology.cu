@@ -511,6 +511,124 @@ void connection_test() {
 
 }
 
+//开集运算,先腐蚀，后膨胀,输入值已经是二值化以后的
+Mat open_set(Mat& image,int M,int N,Point_gpu* point_N = NULL, uchar* data_N = NULL) {
+	Mat Lena = image.clone();
+	Lena.convertTo(Lena, CV_8U);
+
+	Point_gpu* point;
+	uchar* data;
+	if (NULL != point_N && NULL!= data_N)
+	{
+		point = point_N;
+		data = data_N;
+	}
+	else {
+		point = set_Point_gpu(M, N);
+		data = set_Point_data(M, N);
+	}
+	
+	Mat mide = morphology_gpu_Mat(Lena, M*N, point, data, 0);
+	mide = morphology_gpu_Mat(mide, M*N, point, data, 1);
+	return mide.clone();
+}
+
+//闭集运算,先膨胀，后腐蚀,输入值已经是二值化以后的
+Mat close_set(Mat& image, int M, int N, Point_gpu* point_N=NULL, uchar* data_N=NULL) {
+	Mat Lena = image.clone();
+	Lena.convertTo(Lena, CV_8U);
+
+	Point_gpu* point;
+	uchar* data;
+	if (NULL != point_N && NULL != data_N)
+	{  
+		point = point_N;
+		data = data_N;
+	}
+	else {
+		point = set_Point_gpu(M, N);
+		data = set_Point_data(M, N);
+	}
+
+	Mat mide = morphology_gpu_Mat(Lena, M*N, point, data, 1);
+	mide = morphology_gpu_Mat(mide, M*N, point, data, 0);
+	return mide.clone();
+}
+
+Mat bone_test() {
+	Mat Lena = imread("C:/Users/Administrator/Desktop/opencv/fy.jpg");
+	cvtColor(Lena, Lena, COLOR_BGR2GRAY);//转换为灰度图
+	threshold(Lena, Lena, 100, 255, 0);
+	Lena = NOT_two(Lena);
+	//Mat Lena_close=Lena.clone();
+	image_show(Lena, 1, "原图");
+
+	int M = 3;
+	int N = 3;
+	Point_gpu* point;
+	uchar* data;
+
+	point = set_Point_gpu(M, N);
+	data = set_Point_data(M, N);
+	Mat vector[500];
+	Mat AkB = Lena;
+	int k = 500;
+
+	for (size_t i = 0; i < k; i++)
+	{
+		vector[i] = Mat::zeros(Lena.size(),CV_8U);
+	}
+	
+	for (size_t i = 0; i < k; i++)
+	{
+		AkB = morphology_gpu_Mat(AkB, M*N, point, data, 0);
+		if (i == 10)
+		{
+			Mat Akb_N = AkB.clone();
+			Akb_N.convertTo(Akb_N, CV_32F);
+			image_show(Akb_N, 1, "AKB10");
+		}
+		vector[i]=AND_NOT_two(AkB, open_set(AkB, M, N, point, data));
+		if (i == 10)
+		{
+			Mat Akb_m = vector[i].clone();
+			Akb_m.convertTo(Akb_m, CV_32F);
+			image_show(Akb_m, 1, "AKB*B10");
+		}
+	}
+	
+	Mat result= vector[k-1];
+	for (size_t i = 0; i < k-1; i++)
+	{
+		result=OR_two(result, vector[i]);
+	}
+
+	result.convertTo(result, CV_32F);
+	image_show(result, 1, "结果");
+	return result.clone();
+}
+
+//开集和闭集
+void  open_close_test()
+{
+	Mat Lena = imread("C:/Users/Administrator/Desktop/opencv/t.bmp");
+	cvtColor(Lena, Lena, COLOR_BGR2GRAY);//转换为灰度图
+	threshold(Lena, Lena, 10, 255, 0);
+	//Mat Lena_close=Lena.clone();
+	image_show(Lena, 1, "原图");
+
+	//由于只找一个区域，没有进行腐蚀操作
+	int M = 100;
+	int N = 100;
+
+	Mat mide = open_set(Lena,M,N);
+	mide.convertTo(mide, CV_32F);
+	image_show(mide, 1, "开操作");
+
+	Mat mide_close=close_set(Lena,M,N);
+	mide_close.convertTo(mide_close, CV_32F);
+	image_show(mide_close, 1, "闭操作");
+}
 
 void chapter9() {
 	//test();//测试morphology_gpu是否正确
@@ -518,5 +636,7 @@ void chapter9() {
 	//morphology_test(3, 3, 1);//例子9.1
 	//man_test();//例子9.5
 	//remove_test();//例子9.6
-	connection_test();
+	//connection_test();
+	//open_close_test();
+	bone_test();
 }

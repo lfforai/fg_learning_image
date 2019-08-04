@@ -108,6 +108,7 @@
     <Image Include="chicken.png" />
     <Image Include="font.png" />
     <Image Include="font1.png" />
+    <Image Include="fy.jpg" />
     <Image Include="man.png" />
     <Image Include="old.png" />
   </ItemGroup>

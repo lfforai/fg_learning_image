@@ -62,6 +62,9 @@
       <Filter>piture</Filter>
     </Image>
     <Image Include="chicken.png" />
+    <Image Include="fy.jpg">
+      <Filter>piture</Filter>
+    </Image>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="cufft">
