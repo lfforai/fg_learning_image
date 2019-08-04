@@ -58,6 +58,10 @@
     <Image Include="..\..\..\..\Desktop\opencv\yuan.png">
       <Filter>piture</Filter>
     </Image>
+    <Image Include="..\..\..\..\Desktop\opencv\chicken.png">
+      <Filter>piture</Filter>
+    </Image>
+    <Image Include="chicken.png" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="cufft">

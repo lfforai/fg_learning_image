@@ -206,6 +206,7 @@ Mat morphology_gpu_Mat(const Mat& image, int len, Point_gpu*  point_offset_N, uc
 	return dstImg1.clone();
 }
 
+
 //M是长，N是宽
 Point_gpu* set_Point_gpu(int M, int N) {
 	Point_gpu*  point_offset_N = (Point_gpu*)malloc(sizeof(Point_gpu) * M*N);
@@ -254,6 +255,32 @@ uchar* set_Point_data_pz(int M, int N) {
 	data[7] = 255;
 	data[8] = 0;
 	return data;
+}
+
+void test() {
+	int M = 3;
+	int N = 3;
+
+	Mat X = Mat::zeros(Size(5, 5), CV_8U);
+	X.at<uchar>(0, 1) = 255;
+	X.at<uchar>(0, 0) = 255;
+	X.at<uchar>(0, 2) = 255;
+	X.at<uchar>(1, 1) = 255;
+	//X.at<uchar>(2, 4) = 255;
+	//X.at<uchar>(3, 3) = 255;
+	cout << X << endl;
+	Point_gpu* point = set_Point_gpu(M, N);
+	uchar* data = set_Point_data_pz(M, N);
+	Mat mide = morphology_gpu_Mat(X, M*N, point, data, 1);
+	cout << mide << endl;
+	cout << "-------------------------" << endl;
+	for (size_t i = 0; i < 1; i++)
+	{
+		mide = morphology_gpu_Mat(mide, M*N, point, data, 1);
+	}
+	//mide.convertTo(mide, CV_8U);
+	cout << mide << endl;
+	cout << "-------------------------" << endl;
 }
 
 void morphology_test(int M, int N,int mode)
@@ -437,36 +464,59 @@ void remove_test() {
 	image_show(result, 1, "结果");
 }
 
-void test() {
+//统计一个二值图中的不为0的像素点个数
+int cout_image_thread(Mat& image,int max=255)
+{   Scalar ss=sum(image);
+	return (int)(ss[0] / max);
+}
+
+//例9.7
+void connection_test() {
+	Mat Lena = imread("C:/Users/Administrator/Desktop/opencv/chicken.png");
+	cvtColor(Lena, Lena, COLOR_BGR2GRAY);//转换为灰度图
+	threshold(Lena, Lena, 190, 255, 0);
+	image_show(Lena, 1, "原图");
+
+	//由于只找一个区域，没有进行腐蚀操作
+	//Mat X=Mat::zeros(Lena.size(),CV_8U);
 	int M = 3;
 	int N = 3;
-	
-	Mat X = Mat::zeros(Size(5, 5), CV_8U); 
-	X.at<uchar>(0, 1) = 255;
-	X.at<uchar>(0, 0) = 255;
-	X.at<uchar>(0, 2) = 255;
-	X.at<uchar>(1, 1) = 255;
-	//X.at<uchar>(2, 4) = 255;
-	//X.at<uchar>(3, 3) = 255;
-	cout <<X<< endl;
+	cv::Point p;//用image watch 查到的点
+	p.x = 496;
+	p.y = 89;
+	Mat X = Mat::zeros(Lena.size(), CV_8U);
+	X.at<uchar>(p.y, p.x) = 255;
+
 	Point_gpu* point = set_Point_gpu(M, N);
-	uchar* data = set_Point_data_pz(M, N);
+	uchar* data = set_Point_data(M, N);//8连通
+	//char* file = "C:/Users/Administrator/Desktop/opencv/yuan.png";
 	Mat mide = morphology_gpu_Mat(X, M*N, point, data, 1);
-	cout << mide << endl;
-	cout <<"-------------------------"<< endl;
-	for (size_t i = 0; i < 1; i++)
+	Mat result = AND_two(mide, Lena, 0, 255);
+
+	int mark = 0;
+	for (size_t i = 0; i <1000; i++)
 	{
-	   mide=morphology_gpu_Mat(mide, M*N, point, data, 1);
+		mide = morphology_gpu_Mat(result, M*N, point, data, 1);
+		result = AND_two(mide, Lena, 0, 255);
+		if (mark == cout_image_thread(result, 255))
+			break;
+		else
+			mark = cout_image_thread(result, 255);
 	}
-	//mide.convertTo(mide, CV_8U);
-	cout<<mide<<endl;
-	cout << "-------------------------" << endl;
+
+	cout << "连通分量中像素个数：" <<mark<< endl;
+    //result = OR_two(result, Lena);
+	result.convertTo(result, CV_32F);
+	image_show(result, 1, "联通分量图");
+
 }
+
 
 void chapter9() {
 	//test();//测试morphology_gpu是否正确
 	//morphology_test(5, 5, 0);//例子9.1
 	//morphology_test(3, 3, 1);//例子9.1
 	//man_test();//例子9.5
-	remove_test();//例子9.6
+	//remove_test();//例子9.6
+	connection_test();
 }

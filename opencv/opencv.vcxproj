@@ -97,6 +97,7 @@
     <Image Include="..\..\..\..\Desktop\opencv\blood2.png" />
     <Image Include="..\..\..\..\Desktop\opencv\blood3.png" />
     <Image Include="..\..\..\..\Desktop\opencv\breast.png" />
+    <Image Include="..\..\..\..\Desktop\opencv\chicken.png" />
     <Image Include="..\..\..\..\Desktop\opencv\earth.png" />
     <Image Include="..\..\..\..\Desktop\opencv\house.png" />
     <Image Include="..\..\..\..\Desktop\opencv\phobos.png" />
@@ -104,6 +105,7 @@
     <Image Include="..\..\..\..\Desktop\opencv\street.png" />
     <Image Include="..\..\..\..\Desktop\opencv\yuan.png" />
     <Image Include="..\..\..\..\Desktop\opencv\zw.png" />
+    <Image Include="chicken.png" />
     <Image Include="font.png" />
     <Image Include="font1.png" />
     <Image Include="man.png" />
