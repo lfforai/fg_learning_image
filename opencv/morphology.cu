@@ -11,20 +11,43 @@ cudaChannelFormatDesc cuDesc_corrode = cudaCreateChannelDesc<uchar>();
 
 //图像腐蚀change center
 __device__ uchar change_center(int x, int y, Point_gpu* point_gpu,uchar* data,int len) {
-	int x_N;
-	int y_N;
-	uchar result = 255;
-	for (int i = 0; i < len; i++)
-	{
-		x_N = (int)(point_gpu[i].x + x);
-		y_N = (int)(point_gpu[i].y + y);
-		if (tex2D(refTex_corrode, x_N, y_N) < 255 && data[i]==255)//每个point_gpu位置上的像素都需要是255，否则该点将被腐蚀点
+	
+		int x_N;
+		int y_N;
+		uchar result = 255;
+		for (int i = 0; i < len; i++)
 		{
-			result = 0;
-			break;
+			x_N = (int)(point_gpu[i].x + x);
+			y_N = (int)(point_gpu[i].y + y);
+			if (tex2D(refTex_corrode, x_N, y_N) < 255 && data[i] == 255)//每个point_gpu位置上的像素都需要是255，否则该点将被腐蚀点
+			{   //如果该点data【i】=0,表示不是腐蚀考虑条件
+				result = 0;
+				break;
+			}
 		}
-	}
-	return  result;
+		return  result;	
+}
+
+__device__ uchar change_center_catch(int x, int y, Point_gpu* point_gpu, uchar* data, int len) {
+		int x_N;
+		int y_N;
+		uchar result;
+		for (int i = 0; i < len; i++)
+		{
+			x_N = (int)(point_gpu[i].x + x);
+			y_N = (int)(point_gpu[i].y + y);
+			if (tex2D(refTex_corrode, x_N, y_N) == 255 && data[i] == 255)//每个point_gpu位置上的像素都需要是255，
+			{   //如果该点data【i】=255,表示具备了可以填充的条件
+				result = 255;
+			}
+
+			if (tex2D(refTex_corrode, x_N, y_N) == 0 && data[i] == 255)//如果不满足匹配条件，该0点还维持原0
+			{   //如果该点像素与data【i】不一致,表示不是腐蚀考虑条件，该0点依然不填充	
+		    	result = 0;
+				break;
+			}
+		}
+		return  result;
 }
 
 //图像腐蚀
@@ -35,8 +58,18 @@ __global__ void corrodeKerkel(int* pDstImgData, int imgHeight_des_d, int imgWidt
 		if (tidx < imgWidth_des_d && tidy < imgHeight_des_d)
 		{
 			int idx = tidy * imgWidth_des_d + tidx;
-			if(tex2D(refTex_corrode,tidx,tidy)==255)
-			   pDstImgData[idx] = (int)change_center(tidx,tidy,point_gpu,data,len);
+			int index;
+			
+			if (data[(int)(len / 2)] == 255)//寻找255进行腐蚀测试
+			{
+				//printf("%u \n:", data[(int)(len / 2)]);
+				if (tex2D(refTex_corrode, tidx, tidy) == 255)
+					pDstImgData[idx] = (int)change_center(tidx, tidy, point_gpu, data, len);
+			}
+			else if (data[(int)(len / 2)] == 0) {
+				if (tex2D(refTex_corrode, tidx, tidy) == 0)//寻找0进行击中击不中的填充
+					pDstImgData[idx] = (int)change_center_catch(tidx, tidy, point_gpu, data, len);
+			}
 			//printf("value=%u,%d,%d,%f,%f \n", pDstImgData[idx], x1, y2, x_des, y_des);
 		}
 	}
@@ -237,6 +270,21 @@ uchar* set_Point_data(int M, int N) {
 		for (size_t j = 0; j < N; j++)
 		{
 			data[i*N + j]= 255;
+		}
+	}
+	return data;
+}
+
+//击中、不中用
+uchar* set_Point_data_jz(int M, int N) {
+	uchar*  data = (uchar*)malloc(sizeof(uchar) * M*N);
+	int M_center = (int)M / 2;
+	int N_center = (int)N / 2;
+	for (size_t i = 0; i < M; i++)
+	{
+		for (size_t j = 0; j < N; j++)
+		{
+			data[i*N + j] = 0;
 		}
 	}
 	return data;
@@ -608,6 +656,92 @@ Mat bone_test() {
 	return result.clone();
 }
 
+//凸包计算测试
+void Prot_shell() {
+	Mat Lena = imread("C:/Users/Administrator/Desktop/opencv/shell.png");
+	cvtColor(Lena, Lena, COLOR_BGR2GRAY);//转换为灰度图
+	threshold(Lena, Lena, 100, 255, 0);
+	//Mat Lena_close=Lena.clone();
+	image_show(Lena, 1, "原图");
+
+	int M = 3;
+	int N = 3;
+
+	Point_gpu* point = set_Point_gpu(M, N);
+	
+	//B1
+	uchar* B1 = set_Point_data_jz(M, N);
+	B1[N * 0 + 0] = 255;
+	B1[N * 1 + 0] = 255;
+	B1[N * 2 + 0] = 255;
+
+	//B2
+	uchar* B2 = set_Point_data_jz(M, N);
+	B2[N * 0 + 0] = 255;
+	B2[N * 0 + 1] = 255;
+	B2[N * 0 + 2] = 255;
+
+	//B3
+	uchar* B3 = set_Point_data_jz(M, N);
+	B3[N * 0 + 2] = 255;
+	B3[N * 1 + 2] = 255;
+	B3[N * 2 + 2] = 255;
+
+	//B4
+	uchar* B4 = set_Point_data_jz(M, N);
+	B4[N * 2 + 0] = 255;
+	B4[N * 2 + 1] = 255;
+	B4[N * 2 + 2] = 255;
+
+	//B1 迭代
+	Mat X1=Lena.clone();
+	Mat X1_N=Lena.clone();
+	while (true){
+		X1 = OR_two(Lena,morphology_gpu_Mat(X1, M*N, point, B1, 0));
+		if (cout_image_thread(X1) == cout_image_thread(X1_N))
+			break;
+		else
+			X1_N = X1.clone();
+	}
+
+	//B2 迭代
+	Mat X2 = Lena.clone();
+	Mat X2_N = Lena.clone();
+	while (true) {
+		X2 = OR_two(Lena, morphology_gpu_Mat(X2, M*N, point, B2, 0));
+		if (cout_image_thread(X2) == cout_image_thread(X2_N))
+			break;
+		else
+			X2_N = X2.clone();
+	}
+
+	//B3 迭代
+	Mat X3 = Lena.clone();
+	Mat X3_N = Lena.clone();
+	while (true) {
+		X3 = OR_two(Lena, morphology_gpu_Mat(X3, M*N, point, B3, 0));
+		if (cout_image_thread(X3) == cout_image_thread(X3_N))
+			break;
+		else
+			X3_N = X3.clone();
+	}
+
+	//B4 迭代
+	Mat X4 = Lena.clone();
+	Mat X4_N = Lena.clone();
+	while (true) {
+		X4 = OR_two(Lena, morphology_gpu_Mat(X4, M*N, point, B4, 0));
+		if (cout_image_thread(X4) == cout_image_thread(X4_N))
+			break;
+		else
+			X4_N = X4.clone();
+	}
+
+	Mat result= OR_two(OR_two(OR_two(X1, X2), X3),X4);
+	result.convertTo(result, CV_32F);
+	image_show(result, 1, "结果");
+}
+
 //开集和闭集
 void  open_close_test()
 {
@@ -638,5 +772,6 @@ void chapter9() {
 	//remove_test();//例子9.6
 	//connection_test();
 	//open_close_test();
-	bone_test();
+	//bone_test();
+	Prot_shell();
 }
