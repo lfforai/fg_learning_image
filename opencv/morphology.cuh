@@ -27,6 +27,7 @@ __device__ __host__  struct Point_gpu {
 	float y;
 };
 
+//二值化版
 struct se_tpye {
 	uchar* data;//全部为1的向量,目前没有用到为灰度形态预留
 	Point_gpu* point_offset;//相对于中心的位置的偏移量
@@ -61,6 +62,36 @@ struct se_tpye {
 		}
 	}
 };
+
+//灰度版
+struct se_tpye_gray {
+	int* data;//全部为1的向量,目前没有用到为灰度形态预留
+	Point_gpu* point_offset;//相对于中心的位置的偏移量
+	Point_gpu center;//目前没用
+	int length;
+	void init(int length_N, Point_gpu*  point_offset_N, int* data_N)
+	{
+		this->length = length_N;
+		//检测cuda设备
+		int deviceCount;
+		cudaGetDeviceCount(&deviceCount);
+		if (deviceCount > 0)
+		{
+			cudaMallocManaged((void**)&point_offset, sizeof(Point_gpu)*length);
+			cudaMallocManaged((void**)&data, sizeof(int)*length);
+
+			this->center.x = 0.0;//cols
+			this->center.y = 0.0;//rows
+			cudaMemcpy(point_offset, point_offset_N, sizeof(Point_gpu)*length, cudaMemcpyDefault);
+			cudaMemcpy(data, data_N, sizeof(int)*length, cudaMemcpyDefault);
+		}
+		else {
+			//目前没有cpu版
+			cout << "gpu no use!" << endl;
+		}
+	}
+};
+
 
 Mat AND_two(const Mat& A, const Mat& B, uchar min = 0, uchar max = 255);
 Mat OR_two(const Mat& A, const Mat& B, uchar min = 0, uchar max = 255);

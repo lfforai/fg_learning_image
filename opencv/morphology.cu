@@ -108,6 +108,8 @@ __global__ void expandKerkel(int* pDstImgData, int imgHeight_des_d, int imgWidth
 	}
 }
 
+
+
 //mode=0 腐蚀，1=膨胀
 Mat morphology_gpu(char * path,int len,Point_gpu*  point_offset_N,uchar* data ,int mode) {
 	se_tpye * se_obj = (se_tpye*)malloc(sizeof(se_tpye));
@@ -259,6 +261,38 @@ Point_gpu* set_Point_gpu(int M, int N) {
 	}
 	return point_offset_N;
 }
+
+
+//M是长，N是宽,生成一个内接圆核-平坦结构元
+int* set_Point_data_circle(int M) 
+{
+	//定义内部函数
+	auto ifin = [](int x_rows, int y_cols, int P_mide, int  Q_mide, int D0_radius)->bool {
+		bool r = false;//包含在D0中
+		if ((float)sqrt(pow(x_rows - P_mide, 2.0) + pow(y_cols - Q_mide, 2.0)) <=(float) D0_radius)
+		{
+			/*cout<< (float)sqrt(pow(x_rows - P_mide, 2.0) + pow(y_cols - Q_mide, 2.0)) <<endl;*/
+			r = true;
+		}
+		return r;
+	};
+
+	int*  data = (int*)malloc(sizeof(int) * M*M);
+	int M_center = (int)M / 2;
+	int N_center = (int)M / 2;
+	cout<< M_center <<endl;
+	for(size_t i = 0; i < M; i++)
+	{   for(size_t j = 0; j < M; j++)
+		  {   if(ifin(j, i, M_center, N_center, M_center))
+			    {data[i*M + j] =-255;//不能忽略的
+			    }else{
+				 data[i*M + j] =-1;//可以忽略的
+                }
+		  }
+	}
+	return data;
+}
+
 
 //腐蚀用
 uchar* set_Point_data(int M, int N) {
@@ -764,6 +798,276 @@ void  open_close_test()
 	image_show(mide_close, 1, "闭操作");
 }
 
+
+//--------------------------------------灰度形态图像学------------------------------------
+//灰度图像腐蚀-平坦圆
+__device__ int change_center_gray(int x, int y,int imgHeight_des_d,int imgWidth_des_d,Point_gpu* point_gpu, int* data, int len) {
+	int x_N;
+	int y_N;
+	int min=1000;
+
+	for (int i = 0; i < len; i++)
+	{
+		x_N = (int)(point_gpu[i].x + x);
+		y_N = (int)(point_gpu[i].y + y);
+		if (data[i] == -255 && -1 < x_N && x_N < imgWidth_des_d && -1 < y_N && y_N < imgHeight_des_d)
+		{   //如果该点data【i】=0,表示不是腐蚀考虑条件
+			if ((int)tex2D(refTex_corrode, x_N, y_N) < min)
+			   min = (int)tex2D(refTex_corrode, x_N, y_N);
+		}
+	}
+	return  min;
+}
+
+
+//灰度图像腐蚀
+__global__ void corrodeKerkel(int* pDstImgData, int imgHeight_des_d, int imgWidth_des_d, Point_gpu* point_gpu, int* data, int len)
+{   //printf("threadIdx,x=%d",threadIdx.x);
+	const int tidx = blockDim.x * blockIdx.x + threadIdx.x;
+	const int tidy = blockDim.y * blockIdx.y + threadIdx.y;
+	if (tidx < imgWidth_des_d && tidy < imgHeight_des_d)
+	{
+		int idx = tidy * imgWidth_des_d + tidx;
+        pDstImgData[idx] = change_center_gray(tidx, tidy,imgHeight_des_d,imgWidth_des_d,point_gpu, data, len);
+	}
+}
+
+//灰度图像膨胀
+__device__ int change_expand_gray(int x, int y, int imgHeight_des_d, int imgWidth_des_d, Point_gpu* point_gpu, int* data, int len) {
+	int x_N;
+	int y_N;
+	int max = -265;
+
+	for (int i = 0; i < len; i++)
+	{
+		x_N = (int)(point_gpu[i].x + x);
+		y_N = (int)(point_gpu[i].y + y);
+		if (data[i] == -255 && -1 < x_N && x_N < imgWidth_des_d && -1 < y_N && y_N < imgHeight_des_d)
+		{   //如果该点data【i】=0,表示不是腐蚀考虑条件
+			if ((int)tex2D(refTex_corrode, x_N, y_N) > max)
+				max = (int)tex2D(refTex_corrode, x_N, y_N);
+		}
+	}
+	return  max;
+}
+
+//灰度图像膨胀
+__global__ void expandKerkel(int* pDstImgData, int imgHeight_des_d, int imgWidth_des_d, Point_gpu* point_gpu, int* data, int len)
+{   //printf("threadIdx,x=%d",threadIdx.x);
+	const int tidx = blockDim.x * blockIdx.x + threadIdx.x;
+	const int tidy = blockDim.y * blockIdx.y + threadIdx.y;
+	if (tidx < imgWidth_des_d && tidy < imgHeight_des_d)
+	{
+		int idx = tidy * imgWidth_des_d + tidx;
+        pDstImgData[idx] = change_expand_gray(tidx, tidy, imgHeight_des_d, imgWidth_des_d, point_gpu, data, len);
+	}
+}
+
+//灰度图像腐蚀和膨胀
+Mat morphology_gpu_gray(char * path, int len, Point_gpu*  point_offset_N, int* data, int mode) {
+	se_tpye_gray * se_obj = (se_tpye_gray*)malloc(sizeof(se_tpye_gray));
+	se_obj->init(len, point_offset_N, data);
+
+	Mat Lena = imread(path);
+	cvtColor(Lena, Lena, COLOR_BGR2GRAY);//转换为灰度图
+	//threshold(Lena, Lena, 100, 255, 0);
+	image_show(Lena, 1, "原图");
+
+	int x_rato_less = 1.0;
+	int y_rato_less = 1.0;
+
+	int imgWidth_src = Lena.cols;//原图像宽
+	int imgHeight_src = Lena.rows;//原图像高
+	int channels = Lena.channels();
+
+	int imgWidth_des_less = floor(imgWidth_src * x_rato_less);//缩小图像
+	int imgHeight_des_less = floor(imgHeight_src * y_rato_less);//缩小图像
+
+	//设置1纹理属性
+	cudaError_t t;
+	refTex_corrode.addressMode[0] = cudaAddressModeBorder;
+	refTex_corrode.addressMode[1] = cudaAddressModeBorder;
+	refTex_corrode.normalized = false;
+	refTex_corrode.filterMode = cudaFilterModePoint;
+	//绑定cuArray到纹理
+	cudaMallocArray(&cuArray_corrode, &cuDesc_corrode, imgWidth_src, imgHeight_src);
+	t = cudaBindTextureToArray(refTex_corrode, cuArray_corrode);
+	//拷贝数据到cudaArray
+	t = cudaMemcpyToArray(cuArray_corrode, 0, 0, Lena.data, imgWidth_src * imgHeight_src * sizeof(uchar), cudaMemcpyHostToDevice);
+
+	//输出放缩以后在cpu上图像
+	Lena.convertTo(Lena, CV_32S);
+	Mat dstImg1 = Mat::zeros(imgHeight_des_less, imgWidth_des_less, CV_32SC1);//缩小
+
+	//输出放缩以后在cuda上的图像
+	int* pDstImgData1 = NULL;
+	t = cudaMalloc(&pDstImgData1, imgHeight_des_less * imgWidth_des_less * sizeof(int));
+	t = cudaMemcpy(pDstImgData1, Lena.data, imgWidth_des_less * imgHeight_des_less * sizeof(int)*channels, cudaMemcpyHostToDevice);
+
+	dim3 block(16, 16);
+	dim3 grid((imgWidth_des_less + block.x - 1) / block.x, (imgHeight_des_less + block.y - 1) / block.y);
+
+	if (mode == 0)
+		corrodeKerkel << <grid, block >> > (pDstImgData1, imgHeight_des_less, imgWidth_des_less, se_obj->point_offset, se_obj->data, len);
+	if (mode == 1)
+		expandKerkel << <grid, block >> > (pDstImgData1, imgHeight_des_less, imgWidth_des_less, se_obj->point_offset, se_obj->data, len);
+	cudaDeviceSynchronize();
+
+	//从GPU拷贝输出数据到CPU
+	t = cudaMemcpy(dstImg1.data, pDstImgData1, imgWidth_des_less * imgHeight_des_less * sizeof(int)*channels, cudaMemcpyDeviceToHost);
+	cudaFree(cuArray_corrode);
+	cudaFree(pDstImgData1);
+	stringstream ss;
+	ss << len;
+	string mark;
+	ss >> mark;
+	string ret;
+	if (mode==1)
+	   ret= string("膨胀")+string("后图") + mark;
+	else
+	   ret = string("腐蚀") + string("后图") + mark;
+	image_show(dstImg1, 1, ret.c_str());
+	//namedWindow("cuda_point最近插值：", WINDOW_NORMAL);
+	//imshow("腐蚀以后的图像：", dstImg1);
+	//imwrite("C:/Users/Administrator/Desktop/图片/Gray_Image0.jpg", dstImg1);
+	return dstImg1.clone();
+}
+
+//灰度图像腐蚀和膨胀
+Mat morphology_gpu_gray_Mat(Mat& Lena_N, int len, Point_gpu*  point_offset_N, int* data, int mode) {
+	se_tpye_gray * se_obj = (se_tpye_gray*)malloc(sizeof(se_tpye_gray));
+	se_obj->init(len, point_offset_N, data);
+
+	Mat Lena = Lena_N.clone();
+	//cvtColor(Lena, Lena, COLOR_BGR2GRAY);//转换为灰度图
+	//threshold(Lena, Lena, 100, 255, 0);
+	//image_show(Lena, 1, "原图");
+
+	int x_rato_less = 1.0;
+	int y_rato_less = 1.0;
+
+	int imgWidth_src = Lena.cols;//原图像宽
+	int imgHeight_src = Lena.rows;//原图像高
+	int channels = Lena.channels();
+
+	int imgWidth_des_less = floor(imgWidth_src * x_rato_less);//缩小图像
+	int imgHeight_des_less = floor(imgHeight_src * y_rato_less);//缩小图像
+
+	//设置1纹理属性
+	cudaError_t t;
+	refTex_corrode.addressMode[0] = cudaAddressModeBorder;
+	refTex_corrode.addressMode[1] = cudaAddressModeBorder;
+	refTex_corrode.normalized = false;
+	refTex_corrode.filterMode = cudaFilterModePoint;
+	//绑定cuArray到纹理
+	cudaMallocArray(&cuArray_corrode, &cuDesc_corrode, imgWidth_src, imgHeight_src);
+	t = cudaBindTextureToArray(refTex_corrode, cuArray_corrode);
+	//拷贝数据到cudaArray
+	t = cudaMemcpyToArray(cuArray_corrode, 0, 0, Lena.data, imgWidth_src * imgHeight_src * sizeof(uchar), cudaMemcpyHostToDevice);
+
+	//输出放缩以后在cpu上图像
+	Lena.convertTo(Lena, CV_32S);
+	Mat dstImg1 = Mat::zeros(imgHeight_des_less, imgWidth_des_less, CV_32SC1);//缩小
+
+	//输出放缩以后在cuda上的图像
+	int* pDstImgData1 = NULL;
+	t = cudaMalloc(&pDstImgData1, imgHeight_des_less * imgWidth_des_less * sizeof(int));
+	t = cudaMemcpy(pDstImgData1, Lena.data, imgWidth_des_less * imgHeight_des_less * sizeof(int)*channels, cudaMemcpyHostToDevice);
+
+	dim3 block(16, 16);
+	dim3 grid((imgWidth_des_less + block.x - 1) / block.x, (imgHeight_des_less + block.y - 1) / block.y);
+
+	if (mode == 0)
+		corrodeKerkel << <grid, block >> > (pDstImgData1, imgHeight_des_less, imgWidth_des_less, se_obj->point_offset, se_obj->data, len);
+	if (mode == 1)
+		expandKerkel << <grid, block >> > (pDstImgData1, imgHeight_des_less, imgWidth_des_less, se_obj->point_offset, se_obj->data, len);
+	cudaDeviceSynchronize();
+
+	//从GPU拷贝输出数据到CPU
+	t = cudaMemcpy(dstImg1.data, pDstImgData1, imgWidth_des_less * imgHeight_des_less * sizeof(int)*channels, cudaMemcpyDeviceToHost);
+	cudaFree(cuArray_corrode);
+	cudaFree(pDstImgData1);
+	//stringstream ss;
+	//ss << len;
+	//string mark;
+	//ss >> mark;
+	//string ret;
+	//if (mode == 1)
+	//	ret = string("膨胀") + string("后图") + mark;
+	//else
+	//	ret = string("腐蚀") + string("后图") + mark;
+	//image_show(dstImg1, 1, ret.c_str());
+	//namedWindow("cuda_point最近插值：", WINDOW_NORMAL);
+	//imshow("腐蚀以后的图像：", dstImg1);
+	//imwrite("C:/Users/Administrator/Desktop/图片/Gray_Image0.jpg", dstImg1);
+	return dstImg1.clone();
+}
+
+Mat open_set_gray(Mat& image, int M, int N, Point_gpu* point_N = NULL, int* data_N = NULL) {
+	Mat Lena = image.clone();
+	Lena.convertTo(Lena, CV_8U);
+
+	Point_gpu* point;
+	int* data;
+	if (NULL != point_N && NULL != data_N)
+	{
+		point = point_N;
+		data = data_N;
+	}
+	else {
+		point = set_Point_gpu(M, N);
+		data = set_Point_data_circle(M);
+	}
+
+	Mat mide = morphology_gpu_gray_Mat(Lena, M*N, point, data, 0);
+	mide.convertTo(mide, CV_8U);
+	mide = morphology_gpu_gray_Mat(mide, M*N, point, data, 1);
+	return mide.clone();
+}
+
+//闭集运算,先膨胀，后腐蚀,输入值已经是二值化以后的
+Mat close_set_gray(Mat& image, int M, int N, Point_gpu* point_N = NULL, int* data_N = NULL) {
+	Mat Lena = image.clone();
+	Lena.convertTo(Lena, CV_8U);
+
+	Point_gpu* point;
+	int* data;
+	if (NULL != point_N && NULL != data_N)
+	{
+		point = point_N;
+		data = data_N;
+	}
+	else {
+
+		point = set_Point_gpu(M, N);
+		data = set_Point_data_circle(M);
+	}
+
+	Mat mide = morphology_gpu_gray_Mat(Lena, M*N, point, data, 1);
+	mide.convertTo(mide, CV_8U);
+	mide = morphology_gpu_gray_Mat(mide, M*N, point, data, 0);
+	return mide.clone();
+}
+
+///灰度形态图像学 测试
+void gray_test() {
+
+	int M = 3;
+	int N = 3;
+	Point_gpu* point = set_Point_gpu(M, N);
+	int* data = set_Point_data_circle(M);
+
+	morphology_gpu_gray("C:/Users/Administrator/Desktop/opencv/dl.png", M*N, point, data, 0);
+	morphology_gpu_gray("C:/Users/Administrator/Desktop/opencv/dl.png", M*N, point, data, 1);
+	//Mat Lena = imread("C:/Users/Administrator/Desktop/opencv/dl.png");
+	//cvtColor(Lena, Lena, COLOR_BGR2GRAY);//转换为灰度图
+	//image_show(Lena,1,"原图");
+	//Mat close=close_set_gray(Lena, M, N, NULL, NULL);
+	//image_show(close, 1,"close");
+	//Mat open=open_set_gray(Lena, 10, 10, NULL, NULL);
+	//image_show(open, 1,"open");
+}
+
 void chapter9() {
 	//test();//测试morphology_gpu是否正确
 	//morphology_test(5, 5, 0);//例子9.1
@@ -773,5 +1077,6 @@ void chapter9() {
 	//connection_test();
 	//open_close_test();
 	//bone_test();
-	Prot_shell();
+	//Prot_shell();
+	gray_test();
 }
