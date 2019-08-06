@@ -304,13 +304,13 @@ void chapter3_test()
 	Laplace_cuda(earth,0,1);
     
 	//绘制拉普拉斯图 
-	//demarcate(earth);
+	demarcate(earth);
 	//earth.convertTo(earth, CV_8U);
 	//imshow("拉普拉斯变换图", earth);
-	
-	earth_src.convertTo(earth_src,CV_32S);
-	earth_src = earth_src + earth;
-	earth_src.convertTo(earth_src, CV_8U);
-	imshow("地球北极_拉普拉斯变换后的图",earth_src);
+	//
+	//earth_src.convertTo(earth_src,CV_32S);
+	//earth_src = earth_src-earth;
+	//earth_src.convertTo(earth_src, CV_8U);
+	//imshow("地球北极_拉普拉斯变换后的图",earth_src);
 	waitKey(0);
 }

@@ -92,7 +92,6 @@ struct se_tpye_gray {
 	}
 };
 
-
 Mat AND_two(const Mat& A, const Mat& B, uchar min = 0, uchar max = 255);
 Mat OR_two(const Mat& A, const Mat& B, uchar min = 0, uchar max = 255);
 Mat NOT_two(const Mat& A, uchar min = 0, uchar max = 255);
@@ -101,3 +100,29 @@ Mat XOR_two(const Mat& A, const Mat& B, uchar min = 0, uchar max = 255);
 Point_gpu* set_Point_gpu(int M, int N);
 void morphology_test(int M, int N,int mode);
 void chapter9();
+
+
+
+struct filter_screem {
+	int *data;
+	Point_gpu* postion;
+	int len;
+	void init(int M, int N)
+	{
+		len = N * M;
+		cudaMallocManaged((void **)&data, sizeof(int)*N*M);
+		cudaMallocManaged((void **)&postion, sizeof(Point_gpu)*N*M);
+		int M_center = (int)M / 2;//y
+		int N_center = (int)N / 2;//x
+		for (size_t i = 0; i < M; i++)
+		{
+			for (size_t j = 0; j < N; j++)
+			{
+				data[i*N + j] = 1;
+				postion[i*N + j].x = (int)j - N_center;
+				postion[i*N + j].y = (int)i - M_center;
+			}
+		}
+	}
+};
+void chapter10_test();

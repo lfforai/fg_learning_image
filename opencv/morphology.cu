@@ -1,13 +1,11 @@
 #pragma once
 #include "morphology.cuh"
-
-texture <uchar, cudaTextureType2D, cudaReadModeElementType> refTex_corrode;//用于计算双线性插值	
+texture <uchar, cudaTextureType2D, cudaReadModeElementType> refTex_corrode;//用于计算双线性插值
 
 cudaArray* cuArray_corrode;//声明CUDA数组
 
 //通道数
 cudaChannelFormatDesc cuDesc_corrode = cudaCreateChannelDesc<uchar>();
-
 
 //图像腐蚀change center
 __device__ uchar change_center(int x, int y, Point_gpu* point_gpu,uchar* data,int len) {
@@ -1057,15 +1055,15 @@ void gray_test() {
 	Point_gpu* point = set_Point_gpu(M, N);
 	int* data = set_Point_data_circle(M);
 
-	morphology_gpu_gray("C:/Users/Administrator/Desktop/opencv/dl.png", M*N, point, data, 0);
-	morphology_gpu_gray("C:/Users/Administrator/Desktop/opencv/dl.png", M*N, point, data, 1);
-	//Mat Lena = imread("C:/Users/Administrator/Desktop/opencv/dl.png");
-	//cvtColor(Lena, Lena, COLOR_BGR2GRAY);//转换为灰度图
-	//image_show(Lena,1,"原图");
-	//Mat close=close_set_gray(Lena, M, N, NULL, NULL);
-	//image_show(close, 1,"close");
-	//Mat open=open_set_gray(Lena, 10, 10, NULL, NULL);
-	//image_show(open, 1,"open");
+	//morphology_gpu_gray("C:/Users/Administrator/Desktop/opencv/dl.png", M*N, point, data, 0);
+	//morphology_gpu_gray("C:/Users/Administrator/Desktop/opencv/dl.png", M*N, point, data, 1);
+	Mat Lena = imread("C:/Users/Administrator/Desktop/opencv/dl.png");
+	cvtColor(Lena, Lena, COLOR_BGR2GRAY);//转换为灰度图
+	image_show(Lena,1,"原图");
+	Mat close=close_set_gray(Lena, M, N, NULL, NULL);
+	image_show(close, 1,"close");
+	Mat open=open_set_gray(Lena, 10, 10, NULL, NULL);
+	image_show(open, 1,"open");
 }
 
 void chapter9() {
@@ -1080,3 +1078,165 @@ void chapter9() {
 	//Prot_shell();
 	gray_test();
 }
+
+
+//第十章
+texture <uchar, cudaTextureType2D, cudaReadModeElementType> refTex_space_filter;//用于计算双线性插值
+
+cudaArray* cuArray_space_filter;//声明CUDA数组
+
+//通道数
+cudaChannelFormatDesc cuDesc_space_filter = cudaCreateChannelDesc<uchar>();//通道数
+
+////空间滤波
+__device__ int spacefilter(int x, int y, Point_gpu* point_gpu, int* data, int len) {
+	int x_N;
+	int y_N;
+	int result = 0;
+	for (int i = 0; i < len; i++)
+	{
+		x_N = (int)(point_gpu[i].x + x);
+		y_N = (int)(point_gpu[i].y + y);
+		result = result + (int)((int)tex2D(refTex_space_filter, x_N, y_N)*data[i]);
+		/*	if (x == 0 && y == 0)
+				printf("x:%d,y:%d,|%d,%d,%d,%d \n",x_N,y_N, i, (int)((int)tex2D(refTex_space_filter, x_N, y_N)*data[i]),(int)tex2D(refTex_space_filter, x_N, y_N),data[i]);*/
+	}
+	return  result;
+}
+
+////空间滤波
+__global__ void space_filter_Kerkel(int* pDstImgData, int imgHeight_des_d, int imgWidth_des_d, Point_gpu* point_gpu, int* data, int len)
+{   //printf("threadIdx,x=%d",threadIdx.x);
+	const int tidx = blockDim.x * blockIdx.x + threadIdx.x;
+	const int tidy = blockDim.y * blockIdx.y + threadIdx.y;
+	if (tidx < imgWidth_des_d && tidy < imgHeight_des_d)
+	{
+		int idx = tidy * imgWidth_des_d + tidx;
+		pDstImgData[idx] = spacefilter(tidx, tidy, point_gpu, data, len);
+	}
+}
+
+Mat space_filter_cpu(char * path, int len, Point_gpu*  point_offset_N, int* data, float size)
+{
+	Mat Lena = imread(path);
+	cvtColor(Lena, Lena, COLOR_BGR2GRAY);//转换为灰度图
+	image_show(Lena, size, "原图");
+
+	int x_rato_less = 1.0;
+	int y_rato_less = 1.0;
+
+	int imgWidth_src = Lena.cols;//原图像宽
+	int imgHeight_src = Lena.rows;//原图像高
+	int channels = Lena.channels();
+
+	int imgWidth_des_less = floor(imgWidth_src * x_rato_less);//缩小图像
+	int imgHeight_des_less = floor(imgHeight_src * y_rato_less);//缩小图像
+
+	//设置1纹理属性
+	cudaError_t t;
+	refTex_space_filter.addressMode[0] = cudaAddressModeClamp;
+	refTex_space_filter.addressMode[1] = cudaAddressModeClamp;
+	refTex_space_filter.normalized = false;
+	refTex_space_filter.filterMode = cudaFilterModePoint;
+	//绑定cuArray到纹理
+	cudaMallocArray(&cuArray_space_filter, &cuDesc_space_filter, imgWidth_src, imgHeight_src);
+	t = cudaBindTextureToArray(refTex_space_filter, cuArray_space_filter);
+	//拷贝数据到cudaArray
+	t = cudaMemcpyToArray(cuArray_space_filter, 0, 0, Lena.data, imgWidth_src * imgHeight_src * sizeof(uchar), cudaMemcpyHostToDevice);
+
+	//输出放缩以后在cpu上图像
+	Lena.convertTo(Lena, CV_32S);
+	//cout<<Lena<<endl;
+	Mat dstImg1 = Mat::zeros(imgHeight_des_less, imgWidth_des_less, CV_32SC1);//缩小
+
+	//输出放缩以后在cuda上的图像
+	int* pDstImgData1 = NULL;
+	t = cudaMalloc(&pDstImgData1, imgHeight_des_less * imgWidth_des_less * sizeof(int));
+	t = cudaMemcpy(pDstImgData1, Lena.data, imgWidth_des_less * imgHeight_des_less * sizeof(int)*channels, cudaMemcpyHostToDevice);
+
+	dim3 block(16, 16);
+	dim3 grid((imgWidth_des_less + block.x - 1) / block.x, (imgHeight_des_less + block.y - 1) / block.y);
+
+	space_filter_Kerkel << <grid, block >> > (pDstImgData1, imgHeight_des_less, imgWidth_des_less, point_offset_N, data, len);
+	cudaDeviceSynchronize();
+
+	//从GPU拷贝输出数据到CPU
+	t = cudaMemcpy(dstImg1.data, pDstImgData1, imgWidth_des_less * imgHeight_des_less * sizeof(int)*channels, cudaMemcpyDeviceToHost);
+	cudaFree(cuArray_space_filter);
+	cudaFree(pDstImgData1);
+	//namedWindow("cuda_point最近插值：", WINDOW_NORMAL);
+	//imshow("腐蚀以后的图像：", dstImg1);
+	//imwrite("C:/Users/Administrator/Desktop/图片/Gray_Image0.jpg", dstImg1);
+	//Lena = Lena - dstImg1;
+	//Lena.convertTo(Lena, CV_8U);
+	//imshow("地球北极_拉普拉斯变换后的图", Lena);
+	//result.convertTo(result, CV_32F);
+	//image_show(Lena, 1, "变化后的图");
+	return dstImg1.clone();
+}
+
+//孤立点检测
+void single_point()
+{
+	int M = 3;
+	int N = 3;
+	filter_screem* filter = (filter_screem*)malloc(sizeof(filter_screem));
+	filter->init(M, N);
+	filter->data[4] = -8;
+	Mat result = space_filter_cpu("C:/Users/Administrator/Desktop/opencv/point.png", filter->len, filter->postion, filter->data, 2);
+	result = abs(result);
+	result.convertTo(result, CV_8U);
+	threshold(result, result, 140, 255, 0);
+	image_show(result, 2, "孤立点图");
+}
+
+//直线检测
+void line_test() {
+	//水平
+	int M = 3;
+	int N = 3;
+	filter_screem* filter_sp = (filter_screem*)malloc(sizeof(filter_screem));
+	filter_sp->init(M, N);
+	int src[9] = { -1,-1,-1,2,2,2,-1,-1,-1 };
+	cudaMemcpy(filter_sp->data, src, sizeof(int)*N*M, cudaMemcpyDefault);
+	Mat result = space_filter_cpu("C:/Users/Administrator/Desktop/opencv/m486.png", filter_sp->len, filter_sp->postion, filter_sp->data, 0.4);
+	result.convertTo(result, CV_8U);
+	threshold(result, result, 20, 255, 0);
+	image_show(result, 0.4, "水平线提取");
+
+	//垂直
+	filter_sp = (filter_screem*)malloc(sizeof(filter_screem));
+	filter_sp->init(M, N);
+	int src_cz[9] = { -1,2,-1,-1,2,-1,-1,2,-1 };
+	cudaMemcpy(filter_sp->data, src_cz, sizeof(int)*N*M, cudaMemcpyDefault);
+	result = space_filter_cpu("C:/Users/Administrator/Desktop/opencv/m486.png", filter_sp->len, filter_sp->postion, filter_sp->data, 0.4);
+	result.convertTo(result, CV_8U);
+	threshold(result, result, 20, 255, 0);
+	image_show(result, 0.4, "垂直线提取");
+
+	//+45度
+	filter_sp = (filter_screem*)malloc(sizeof(filter_screem));
+	filter_sp->init(M, N);
+	int src_z45[9] = { 2,-1,-1,-1,2,-1,-1,-1,2 };
+	cudaMemcpy(filter_sp->data, src_z45, sizeof(int)*N*M, cudaMemcpyDefault);
+	result = space_filter_cpu("C:/Users/Administrator/Desktop/opencv/m486.png", filter_sp->len, filter_sp->postion, filter_sp->data, 0.4);
+	result.convertTo(result, CV_8U);
+	threshold(result, result, 10, 255, 0);
+	image_show(result, 0.4, "45度+线提取");
+
+	//-45度
+	filter_sp = (filter_screem*)malloc(sizeof(filter_screem));
+	filter_sp->init(M, N);
+	int src_f45[9] = { -1,-1,2,-1,2,-1,2,-1,-1 };
+	cudaMemcpy(filter_sp->data, src_f45, sizeof(int)*N*M, cudaMemcpyDefault);
+	result = space_filter_cpu("C:/Users/Administrator/Desktop/opencv/m486.png", filter_sp->len, filter_sp->postion, filter_sp->data, 0.4);
+	result.convertTo(result, CV_8U);
+	threshold(result, result, 10, 255, 0);
+	image_show(result, 0.4, "45度-线提取");
+}
+
+void chapter10_test()
+{
+	//single_point();
+	line_test();
+};

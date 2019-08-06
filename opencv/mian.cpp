@@ -6,6 +6,7 @@
 #include "opencv_chapter4.h"
 #include "opencv_DWT.h"
 #include "morphology.cuh"
+#include "opencv_chapter10.cuh"
 
 //系统包
 #include <opencv2/opencv.hpp>
@@ -13,6 +14,7 @@
 #include <string>
 #include "math_cuda.cuh"
 #include "image_rotate.cuh"
+
 
 using namespace std;
 using namespace cv;
@@ -129,11 +131,12 @@ void charter9() {
 
 int main()
 {
+	chapter10_test();
  //charter7();
   //morphology_test(12,10,1);
   //morphology_test(4, 4,1);
  //morphology_test(15, 15,1);
- chapter9();
+ //chapter10();
  waitKey(0);
 }
 
