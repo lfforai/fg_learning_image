@@ -102,7 +102,6 @@ void morphology_test(int M, int N,int mode);
 void chapter9();
 
 
-
 struct filter_screem {
 	int *data;
 	Point_gpu* postion;
@@ -125,4 +124,5 @@ struct filter_screem {
 		}
 	}
 };
+
 void chapter10_test();

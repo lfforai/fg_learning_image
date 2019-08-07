@@ -12,7 +12,7 @@
 #include <curand.h>
 #include "cufft.h"
 #include "opencv_DFT.h"
-#include "morphology.cuh"
+#include "opencv_chapter9.cuh"
 
 using namespace std;
 using namespace cv;

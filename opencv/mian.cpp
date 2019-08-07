@@ -5,7 +5,7 @@
 #include "opencv_chapter3.h"
 #include "opencv_chapter4.h"
 #include "opencv_DWT.h"
-#include "morphology.cuh"
+#include "opencv_chapter9.cuh"
 #include "opencv_chapter10.cuh"
 
 //系统包
@@ -126,12 +126,11 @@ void charter7() {
 
 //九、第九章的各种测试
 void charter9() {
-
 }
 
 int main()
-{
-	chapter10_test();
+{chapter10_test();
+ //chapter10_test();
  //charter7();
   //morphology_test(12,10,1);
   //morphology_test(4, 4,1);

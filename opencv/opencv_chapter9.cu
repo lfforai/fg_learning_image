@@ -1,5 +1,5 @@
 #pragma once
-#include "morphology.cuh"
+#include "opencv_chapter9.cuh"
 texture <uchar, cudaTextureType2D, cudaReadModeElementType> refTex_corrode;//用于计算双线性插值
 
 cudaArray* cuArray_corrode;//声明CUDA数组
@@ -1080,7 +1080,7 @@ void chapter9() {
 }
 
 
-//第十章
+//---------------------------------------------第十章----------------------------------
 texture <uchar, cudaTextureType2D, cudaReadModeElementType> refTex_space_filter;//用于计算双线性插值
 
 cudaArray* cuArray_space_filter;//声明CUDA数组
@@ -1097,7 +1097,7 @@ __device__ int spacefilter(int x, int y, Point_gpu* point_gpu, int* data, int le
 	{
 		x_N = (int)(point_gpu[i].x + x);
 		y_N = (int)(point_gpu[i].y + y);
-		result = result + (int)((int)tex2D(refTex_space_filter, x_N, y_N)*data[i]);
+		result = result + (int)((float)tex2D(refTex_space_filter, x_N, y_N)*data[i]);
 		/*	if (x == 0 && y == 0)
 				printf("x:%d,y:%d,|%d,%d,%d,%d \n",x_N,y_N, i, (int)((int)tex2D(refTex_space_filter, x_N, y_N)*data[i]),(int)tex2D(refTex_space_filter, x_N, y_N),data[i]);*/
 	}
@@ -1235,8 +1235,117 @@ void line_test() {
 	image_show(result, 0.4, "45度-线提取");
 }
 
+//10.2.5基本边缘检测
+//例10.6
+enum spacefilter_mode {
+	prewitt_x = 0,
+	prewitt_y = 1,
+
+    sobel_x = 2,
+	sobel_y =3,
+
+	sobel_45z = 4,
+	sobel_45f = 5,
+};
+
+filter_screem* set_filter(spacefilter_mode mode){
+  filter_screem* filter = (filter_screem*)malloc(sizeof(filter_screem));
+  int M = 3;
+  int N = 3;
+  filter->init(M, N);
+
+  if (mode == 0)
+  {
+	  int src[9] = { -1,0,1,-1,0,1,-1,0,1 };
+	  cudaMemcpy(filter->data, src, sizeof(int)*N*M, cudaMemcpyDefault);
+  }
+
+  if (mode == 1)
+  {
+	  int src[9] = { -1,-1,-1,0,0,0,1,1,1 };
+	  cudaMemcpy(filter->data, src, sizeof(int)*N*M, cudaMemcpyDefault);
+  }
+
+  if (mode == 2)
+  {
+	  int src[9] = { -1,0,1,-2,0,2,-1,0,1 };
+	  cudaMemcpy(filter->data, src, sizeof(int)*N*M, cudaMemcpyDefault);
+  }
+
+
+  if (mode == 3)
+  {
+	  int src[9] = { -1,-2,-1,0,0,0,1,2,1};
+	  cudaMemcpy(filter->data, src, sizeof(int)*N*M, cudaMemcpyDefault);
+  }
+
+  if (mode == 4)
+  {
+	  int src[9] = { 0,1,2,-1,0,1,-2,-1,0 };
+	  cudaMemcpy(filter->data, src, sizeof(int)*N*M, cudaMemcpyDefault);
+  }
+
+  if (mode == 5)
+  {
+	  int src[9] = { -2,-1,0,-1,0,1,0,1,2 };
+	  cudaMemcpy(filter->data, src, sizeof(int)*N*M, cudaMemcpyDefault);
+  }
+
+  return filter;
+}
+
+void two_fd_jd_test()
+{
+	Mat Lena = imread("C:/Users/Administrator/Desktop/opencv/house.png");
+	cvtColor(Lena, Lena, COLOR_BGR2GRAY);//转换为灰度图
+	image_show(Lena, 1, "原图");
+	
+	filter_screem* filter_x = set_filter(sobel_x);
+	Mat result_x = space_filter_cpu("C:/Users/Administrator/Desktop/opencv/house.png", filter_x->len, filter_x->postion, filter_x->data, 1);
+	//cout << result_x << endl;
+	
+	filter_screem* filter_y = set_filter(sobel_y);
+	Mat result_y = space_filter_cpu("C:/Users/Administrator/Desktop/opencv/house.png", filter_y->len, filter_y->postion, filter_y->data, 1);
+	
+	filter_screem* filter_45z = set_filter(sobel_45z);
+	Mat result_45z = space_filter_cpu("C:/Users/Administrator/Desktop/opencv/house.png", filter_45z->len, filter_45z->postion, filter_45z->data, 1);
+
+	filter_screem* filter_45f = set_filter(sobel_45f);
+	Mat result_45f = space_filter_cpu("C:/Users/Administrator/Desktop/opencv/house.png", filter_45f->len, filter_45f->postion, filter_45f->data, 1);
+
+
+	Mat xy = result_x + result_y;
+	xy.convertTo(xy, CV_8U);
+	image_show(xy, 1, "sobel_y+soble_y");
+
+	Mat xy_abs = abs(result_x) + abs(result_y);
+	xy_abs.convertTo(xy_abs, CV_8U);
+	//imshow("abs:sobel_y+soble_y",xy_abs);
+	image_show(xy_abs, 1, "abs:sobel_y+soble_y");
+	
+	result_x=abs(result_x);
+	result_x.convertTo(result_x, CV_8U);
+	//imshow("sobel_x", result_x);
+	image_show(result_x, 1, "sobel_x");
+
+	result_y = abs(result_y);
+	result_y.convertTo(result_y, CV_8U);
+	//imshow("sobel_y", result_y);
+	image_show(result_y, 1, "sobel_y");
+
+	result_45z = abs(result_45z);
+	result_45z.convertTo(result_45z, CV_8U);
+	image_show(result_45z, 1, "sobel_45z");
+
+	result_45f = abs(result_45f);
+	result_45f.convertTo(result_45f, CV_8U);
+	image_show(result_45f, 1, "sobel_45f");
+}
+
+
 void chapter10_test()
 {
 	//single_point();
-	line_test();
+	//line_test();
+	two_fd_jd_test();
 };

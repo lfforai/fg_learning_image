@@ -350,7 +350,6 @@ void complex_mul(const Mat& A_N,const Mat& B_N,Mat &des)
 };
 
 
-
 //通用的滤波_API
 //mode==0::.muld点乘,对应直接频域上生成H(u,v),
 //mode==1::complex_mul复数乘法,对应空间滤波器生成的虚数奇函数转换的h（u,v）

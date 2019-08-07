@@ -302,15 +302,15 @@ void chapter3_test()
 	Mat earth_src=earth.clone();
 	imshow("地球北极_原图", earth);
 	Laplace_cuda(earth,0,1);
-    
-	//绘制拉普拉斯图 
-	demarcate(earth);
+	//cout << earth << endl;
+	////绘制拉普拉斯图 
+	//demarcate(earth);
+	
 	//earth.convertTo(earth, CV_8U);
 	//imshow("拉普拉斯变换图", earth);
-	//
-	//earth_src.convertTo(earth_src,CV_32S);
-	//earth_src = earth_src-earth;
-	//earth_src.convertTo(earth_src, CV_8U);
-	//imshow("地球北极_拉普拉斯变换后的图",earth_src);
-	waitKey(0);
+
+	earth_src.convertTo(earth_src,CV_32S);
+	earth_src = earth_src-earth;
+	earth_src.convertTo(earth_src, CV_8U);
+	imshow("地球北极_拉普拉斯变换后的图",earth_src);
 }
