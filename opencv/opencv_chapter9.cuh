@@ -101,15 +101,15 @@ Point_gpu* set_Point_gpu(int M, int N);
 void morphology_test(int M, int N,int mode);
 void chapter9();
 
-
+template<class T>
 struct filter_screem {
-	int *data;
+	T *data;
 	Point_gpu* postion;
 	int len;
 	void init(int M, int N)
 	{
 		len = N * M;
-		cudaMallocManaged((void **)&data, sizeof(int)*N*M);
+		cudaMallocManaged((void **)&data, sizeof(T)*N*M);
 		cudaMallocManaged((void **)&postion, sizeof(Point_gpu)*N*M);
 		int M_center = (int)M / 2;//y
 		int N_center = (int)N / 2;//x
@@ -124,5 +124,6 @@ struct filter_screem {
 		}
 	}
 };
+
 
 void chapter10_test();

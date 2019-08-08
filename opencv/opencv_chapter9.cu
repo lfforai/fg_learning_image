@@ -1089,34 +1089,37 @@ cudaArray* cuArray_space_filter;//声明CUDA数组
 cudaChannelFormatDesc cuDesc_space_filter = cudaCreateChannelDesc<uchar>();//通道数
 
 ////空间滤波
-__device__ int spacefilter(int x, int y, Point_gpu* point_gpu, int* data, int len) {
+template<class T>
+__device__ int spacefilter(int x, int y, Point_gpu* point_gpu, T* data, int len) {
 	int x_N;
 	int y_N;
-	int result = 0;
+	float result = 0;
 	for (int i = 0; i < len; i++)
 	{
 		x_N = (int)(point_gpu[i].x + x);
 		y_N = (int)(point_gpu[i].y + y);
-		result = result + (int)((float)tex2D(refTex_space_filter, x_N, y_N)*data[i]);
-		/*	if (x == 0 && y == 0)
-				printf("x:%d,y:%d,|%d,%d,%d,%d \n",x_N,y_N, i, (int)((int)tex2D(refTex_space_filter, x_N, y_N)*data[i]),(int)tex2D(refTex_space_filter, x_N, y_N),data[i]);*/
+		result = result + (((float)tex2D(refTex_space_filter, x_N, y_N))*((float)data[i]));
+	    //if (x == 0 && y == 0)
+				//printf("x:%d,y:%d,|%d,%f,%d,%f \n",x_N,y_N,i, (((float)tex2D(refTex_space_filter, x_N, y_N))*((float)data[i])),(int)tex2D(refTex_space_filter, x_N, y_N),data[i]);
 	}
-	return  result;
+	return  (int)result;
 }
 
 ////空间滤波
-__global__ void space_filter_Kerkel(int* pDstImgData, int imgHeight_des_d, int imgWidth_des_d, Point_gpu* point_gpu, int* data, int len)
+template<class T>
+__global__ void space_filter_Kerkel(int* pDstImgData, int imgHeight_des_d, int imgWidth_des_d, Point_gpu* point_gpu, T* data, int len)
 {   //printf("threadIdx,x=%d",threadIdx.x);
 	const int tidx = blockDim.x * blockIdx.x + threadIdx.x;
 	const int tidy = blockDim.y * blockIdx.y + threadIdx.y;
 	if (tidx < imgWidth_des_d && tidy < imgHeight_des_d)
 	{
 		int idx = tidy * imgWidth_des_d + tidx;
-		pDstImgData[idx] = spacefilter(tidx, tidy, point_gpu, data, len);
+		pDstImgData[idx] = spacefilter<T>(tidx, tidy, point_gpu, data, len);
 	}
 }
 
-Mat space_filter_cpu(char * path, int len, Point_gpu*  point_offset_N, int* data, float size)
+template<class T>
+Mat space_filter_cpu(char * path, int len, Point_gpu*  point_offset_N, T* data, float size)
 {
 	Mat Lena = imread(path);
 	cvtColor(Lena, Lena, COLOR_BGR2GRAY);//转换为灰度图
@@ -1157,7 +1160,66 @@ Mat space_filter_cpu(char * path, int len, Point_gpu*  point_offset_N, int* data
 	dim3 block(16, 16);
 	dim3 grid((imgWidth_des_less + block.x - 1) / block.x, (imgHeight_des_less + block.y - 1) / block.y);
 
-	space_filter_Kerkel << <grid, block >> > (pDstImgData1, imgHeight_des_less, imgWidth_des_less, point_offset_N, data, len);
+	space_filter_Kerkel<T> << <grid, block >> > (pDstImgData1, imgHeight_des_less, imgWidth_des_less, point_offset_N, data, len);
+	cudaDeviceSynchronize();
+
+	//从GPU拷贝输出数据到CPU
+	t = cudaMemcpy(dstImg1.data, pDstImgData1, imgWidth_des_less * imgHeight_des_less * sizeof(int)*channels, cudaMemcpyDeviceToHost);
+	cudaFree(cuArray_space_filter);
+	cudaFree(pDstImgData1);
+	//namedWindow("cuda_point最近插值：", WINDOW_NORMAL);
+	//imshow("腐蚀以后的图像：", dstImg1);
+	//imwrite("C:/Users/Administrator/Desktop/图片/Gray_Image0.jpg", dstImg1);
+	//Lena = Lena - dstImg1;
+	//Lena.convertTo(Lena, CV_8U);
+	//imshow("地球北极_拉普拉斯变换后的图", Lena);
+	//result.convertTo(result, CV_32F);
+	//image_show(Lena, 1, "变化后的图");
+	return dstImg1.clone();
+}
+
+template<class T>
+Mat space_filter_cpu_mat(Mat image, int len, Point_gpu*  point_offset_N, T* data, float size)
+{
+	Mat Lena = image.clone();
+	Lena.convertTo(Lena, CV_8U);
+
+	int x_rato_less = 1.0;
+	int y_rato_less = 1.0;
+
+	int imgWidth_src = Lena.cols;//原图像宽
+	int imgHeight_src = Lena.rows;//原图像高
+	int channels = Lena.channels();
+
+	int imgWidth_des_less = floor(imgWidth_src * x_rato_less);//缩小图像
+	int imgHeight_des_less = floor(imgHeight_src * y_rato_less);//缩小图像
+
+	//设置1纹理属性
+	cudaError_t t;
+	refTex_space_filter.addressMode[0] = cudaAddressModeClamp;
+	refTex_space_filter.addressMode[1] = cudaAddressModeClamp;
+	refTex_space_filter.normalized = false;
+	refTex_space_filter.filterMode = cudaFilterModePoint;
+	//绑定cuArray到纹理
+	cudaMallocArray(&cuArray_space_filter, &cuDesc_space_filter, imgWidth_src, imgHeight_src);
+	t = cudaBindTextureToArray(refTex_space_filter, cuArray_space_filter);
+	//拷贝数据到cudaArray
+	t = cudaMemcpyToArray(cuArray_space_filter, 0, 0, Lena.data, imgWidth_src * imgHeight_src * sizeof(uchar), cudaMemcpyHostToDevice);
+
+	//输出放缩以后在cpu上图像
+	Lena.convertTo(Lena, CV_32S);
+	//cout<<Lena<<endl;
+	Mat dstImg1 = Mat::zeros(imgHeight_des_less, imgWidth_des_less, CV_32SC1);//缩小
+
+	//输出放缩以后在cuda上的图像
+	int* pDstImgData1 = NULL;
+	t = cudaMalloc(&pDstImgData1, imgHeight_des_less * imgWidth_des_less * sizeof(int));
+	t = cudaMemcpy(pDstImgData1, Lena.data, imgWidth_des_less * imgHeight_des_less * sizeof(int)*channels, cudaMemcpyHostToDevice);
+
+	dim3 block(16, 16);
+	dim3 grid((imgWidth_des_less + block.x - 1) / block.x, (imgHeight_des_less + block.y - 1) / block.y);
+
+	space_filter_Kerkel<T> << <grid, block >> > (pDstImgData1, imgHeight_des_less, imgWidth_des_less, point_offset_N, data, len);
 	cudaDeviceSynchronize();
 
 	//从GPU拷贝输出数据到CPU
@@ -1180,10 +1242,10 @@ void single_point()
 {
 	int M = 3;
 	int N = 3;
-	filter_screem* filter = (filter_screem*)malloc(sizeof(filter_screem));
+	filter_screem<int>* filter = (filter_screem<int>*)malloc(sizeof(filter_screem<int>));
 	filter->init(M, N);
 	filter->data[4] = -8;
-	Mat result = space_filter_cpu("C:/Users/Administrator/Desktop/opencv/point.png", filter->len, filter->postion, filter->data, 2);
+	Mat result = space_filter_cpu<int>("C:/Users/Administrator/Desktop/opencv/point.png", filter->len, filter->postion, filter->data, 2);
 	result = abs(result);
 	result.convertTo(result, CV_8U);
 	threshold(result, result, 140, 255, 0);
@@ -1195,41 +1257,41 @@ void line_test() {
 	//水平
 	int M = 3;
 	int N = 3;
-	filter_screem* filter_sp = (filter_screem*)malloc(sizeof(filter_screem));
+	filter_screem<int>* filter_sp = (filter_screem<int>*)malloc(sizeof(filter_screem<int>));
 	filter_sp->init(M, N);
 	int src[9] = { -1,-1,-1,2,2,2,-1,-1,-1 };
 	cudaMemcpy(filter_sp->data, src, sizeof(int)*N*M, cudaMemcpyDefault);
-	Mat result = space_filter_cpu("C:/Users/Administrator/Desktop/opencv/m486.png", filter_sp->len, filter_sp->postion, filter_sp->data, 0.4);
+	Mat result = space_filter_cpu<int>("C:/Users/Administrator/Desktop/opencv/m486.png", filter_sp->len, filter_sp->postion, filter_sp->data, 0.4);
 	result.convertTo(result, CV_8U);
 	threshold(result, result, 20, 255, 0);
 	image_show(result, 0.4, "水平线提取");
 
 	//垂直
-	filter_sp = (filter_screem*)malloc(sizeof(filter_screem));
+	filter_sp = (filter_screem<int>*)malloc(sizeof(filter_screem<int>));
 	filter_sp->init(M, N);
 	int src_cz[9] = { -1,2,-1,-1,2,-1,-1,2,-1 };
 	cudaMemcpy(filter_sp->data, src_cz, sizeof(int)*N*M, cudaMemcpyDefault);
-	result = space_filter_cpu("C:/Users/Administrator/Desktop/opencv/m486.png", filter_sp->len, filter_sp->postion, filter_sp->data, 0.4);
+	result = space_filter_cpu<int>("C:/Users/Administrator/Desktop/opencv/m486.png", filter_sp->len, filter_sp->postion, filter_sp->data, 0.4);
 	result.convertTo(result, CV_8U);
 	threshold(result, result, 20, 255, 0);
 	image_show(result, 0.4, "垂直线提取");
 
 	//+45度
-	filter_sp = (filter_screem*)malloc(sizeof(filter_screem));
+	filter_sp = (filter_screem<int>*)malloc(sizeof(filter_screem<int>));
 	filter_sp->init(M, N);
 	int src_z45[9] = { 2,-1,-1,-1,2,-1,-1,-1,2 };
 	cudaMemcpy(filter_sp->data, src_z45, sizeof(int)*N*M, cudaMemcpyDefault);
-	result = space_filter_cpu("C:/Users/Administrator/Desktop/opencv/m486.png", filter_sp->len, filter_sp->postion, filter_sp->data, 0.4);
+	result = space_filter_cpu<int>("C:/Users/Administrator/Desktop/opencv/m486.png", filter_sp->len, filter_sp->postion, filter_sp->data, 0.4);
 	result.convertTo(result, CV_8U);
 	threshold(result, result, 10, 255, 0);
 	image_show(result, 0.4, "45度+线提取");
 
 	//-45度
-	filter_sp = (filter_screem*)malloc(sizeof(filter_screem));
+	filter_sp = (filter_screem<int>*)malloc(sizeof(filter_screem<int>));
 	filter_sp->init(M, N);
 	int src_f45[9] = { -1,-1,2,-1,2,-1,2,-1,-1 };
 	cudaMemcpy(filter_sp->data, src_f45, sizeof(int)*N*M, cudaMemcpyDefault);
-	result = space_filter_cpu("C:/Users/Administrator/Desktop/opencv/m486.png", filter_sp->len, filter_sp->postion, filter_sp->data, 0.4);
+	result = space_filter_cpu<int>("C:/Users/Administrator/Desktop/opencv/m486.png", filter_sp->len, filter_sp->postion, filter_sp->data, 0.4);
 	result.convertTo(result, CV_8U);
 	threshold(result, result, 10, 255, 0);
 	image_show(result, 0.4, "45度-线提取");
@@ -1246,28 +1308,38 @@ enum spacefilter_mode {
 
 	sobel_45z = 4,
 	sobel_45f = 5,
+
+	Laplace8=6,
+	Gauss25=7,
+	LoG=8
 };
 
-filter_screem* set_filter(spacefilter_mode mode){
-  filter_screem* filter = (filter_screem*)malloc(sizeof(filter_screem));
-  int M = 3;
-  int N = 3;
-  filter->init(M, N);
-
+template<class T>
+filter_screem<T>* set_filter(spacefilter_mode mode){
+  filter_screem<T>* filter = (filter_screem<T>*)malloc(sizeof(filter_screem<T>));
   if (mode == 0)
   {
+	  int M = 3;
+	  int N = 3;
+	  filter->init(M, N);
 	  int src[9] = { -1,0,1,-1,0,1,-1,0,1 };
 	  cudaMemcpy(filter->data, src, sizeof(int)*N*M, cudaMemcpyDefault);
   }
 
   if (mode == 1)
   {
+	  int M = 3;
+	  int N = 3;
+	  filter->init(M, N);
 	  int src[9] = { -1,-1,-1,0,0,0,1,1,1 };
 	  cudaMemcpy(filter->data, src, sizeof(int)*N*M, cudaMemcpyDefault);
   }
 
   if (mode == 2)
   {
+	  int M = 3;
+	  int N = 3;
+	  filter->init(M, N);
 	  int src[9] = { -1,0,1,-2,0,2,-1,0,1 };
 	  cudaMemcpy(filter->data, src, sizeof(int)*N*M, cudaMemcpyDefault);
   }
@@ -1275,44 +1347,125 @@ filter_screem* set_filter(spacefilter_mode mode){
 
   if (mode == 3)
   {
+	  int M = 3;
+	  int N = 3;
+	  filter->init(M, N);
 	  int src[9] = { -1,-2,-1,0,0,0,1,2,1};
 	  cudaMemcpy(filter->data, src, sizeof(int)*N*M, cudaMemcpyDefault);
   }
 
   if (mode == 4)
   {
+	  int M = 3;
+	  int N = 3;
+	  filter->init(M, N);
 	  int src[9] = { 0,1,2,-1,0,1,-2,-1,0 };
 	  cudaMemcpy(filter->data, src, sizeof(int)*N*M, cudaMemcpyDefault);
   }
 
   if (mode == 5)
   {
+	  int M = 3;
+	  int N = 3;
+	  filter->init(M, N);
 	  int src[9] = { -2,-1,0,-1,0,1,0,1,2 };
 	  cudaMemcpy(filter->data, src, sizeof(int)*N*M, cudaMemcpyDefault);
+  }
+
+  if (mode == 6)
+  {
+	  int M = 3;
+	  int N = 3;
+	  filter->init(M, N);
+	  int src[9] = { -1,-1,-1,-1,8,-1,-1,-1,-1 };
+	  cudaMemcpy(filter->data, src, sizeof(int)*N*M, cudaMemcpyDefault);
+  }
+
+
+  if (mode == 7)
+  {
+	  int var = 4;
+	  int M = 6*var+1;
+	  int N = 6*var+1;
+	  int Mcenter = M / 2;
+	  int Ncenter = N / 2;
+	  float* src =(float* )malloc(sizeof(float)*M*N);
+	  float sum=0;
+	  for (size_t j = 0; j <M; j++)
+		  { for (size_t i = 0; i <N; i++)
+			    { 
+		          src[j*N+i]= (float)(exp(-1*(pow((int)i - Ncenter,2.0)+pow((int)j - Mcenter,2.0))/(2.0*pow(var,2.0))));
+				  sum = src[j*N + i] + sum;
+				  //cout<< src[j*N + i] <<endl;
+			    }
+		  }
+
+	  for (size_t j = 0; j < M; j++)
+	  {
+		  for (size_t i = 0; i < N; i++)
+		  {
+			  src[j*N + i] = src[j*N + i]/sum;
+		
+		  }
+	  }
+	  filter->init(M, N);
+	  cudaMemcpy(filter->data, src, sizeof(float)*N*M, cudaMemcpyDefault);
+  }
+
+
+  if (mode == 8)
+  {
+	  int var = 4;
+	  int M = 6 * var + 1;
+	  int N = 6 * var + 1;
+	  int Mcenter = M / 2;
+	  int Ncenter = N / 2;
+	  float* src = (float*)malloc(sizeof(float)*M*N);
+	  float sum = 0;
+	  for (size_t j = 0; j < M; j++)
+	  {
+		  for (size_t i = 0; i < N; i++)
+		  {
+			  src[j*N + i] = (float)((pow((int)i - Ncenter,2.0)+pow((int)j - Mcenter, 2.0)-2.0*var*var)
+				  /pow(var,4.0)*exp(-1 * (pow((int)i - Ncenter, 2.0) + pow((int)j - Mcenter, 2.0)) / (2.0*pow(var, 2.0))));
+			  sum = src[j*N + i] + sum;
+			  //cout<< src[j*N + i] <<endl;
+		  }
+	  }
+
+	  for (size_t j = 0; j < M; j++)
+	  {
+		  for (size_t i = 0; i < N; i++)
+		  {
+			  src[j*N + i] = src[j*N + i] / sum;
+
+		  }
+	  }
+	  filter->init(M, N);
+	  cudaMemcpy(filter->data, src, sizeof(float)*N*M, cudaMemcpyDefault);
   }
 
   return filter;
 }
 
 void two_fd_jd_test()
-{
+{   
 	Mat Lena = imread("C:/Users/Administrator/Desktop/opencv/house.png");
 	cvtColor(Lena, Lena, COLOR_BGR2GRAY);//转换为灰度图
 	image_show(Lena, 1, "原图");
 	
-	filter_screem* filter_x = set_filter(sobel_x);
-	Mat result_x = space_filter_cpu("C:/Users/Administrator/Desktop/opencv/house.png", filter_x->len, filter_x->postion, filter_x->data, 1);
+	filter_screem<int>* filter_x = set_filter<int>(sobel_x);
+	Mat result_x = space_filter_cpu<int>("C:/Users/Administrator/Desktop/opencv/house.png", filter_x->len, filter_x->postion, filter_x->data, 1);
 	//cout << result_x << endl;
 	
-	filter_screem* filter_y = set_filter(sobel_y);
-	Mat result_y = space_filter_cpu("C:/Users/Administrator/Desktop/opencv/house.png", filter_y->len, filter_y->postion, filter_y->data, 1);
+	filter_screem<int>* filter_y = set_filter<int>(sobel_y);
+	Mat result_y = space_filter_cpu<int>("C:/Users/Administrator/Desktop/opencv/house.png", filter_y->len, filter_y->postion, filter_y->data, 1);
 	
-	filter_screem* filter_45z = set_filter(sobel_45z);
-	Mat result_45z = space_filter_cpu("C:/Users/Administrator/Desktop/opencv/house.png", filter_45z->len, filter_45z->postion, filter_45z->data, 1);
+	filter_screem<int>* filter_45z = set_filter<int>(sobel_45z);
+	Mat result_45z = space_filter_cpu<int>("C:/Users/Administrator/Desktop/opencv/house.png", filter_45z->len, filter_45z->postion, filter_45z->data, 1);
 
-	filter_screem* filter_45f = set_filter(sobel_45f);
-	Mat result_45f = space_filter_cpu("C:/Users/Administrator/Desktop/opencv/house.png", filter_45f->len, filter_45f->postion, filter_45f->data, 1);
-
+	filter_screem<int>* filter_45f = set_filter<int>(sobel_45f);
+	Mat result_45f = space_filter_cpu<int>("C:/Users/Administrator/Desktop/opencv/house.png", filter_45f->len, filter_45f->postion, filter_45f->data, 1);
 
 	Mat xy = result_x + result_y;
 	xy.convertTo(xy, CV_8U);
@@ -1324,6 +1477,11 @@ void two_fd_jd_test()
 	image_show(xy_abs, 1, "abs:sobel_y+soble_y");
 	
 	result_x=abs(result_x);
+	//double max, min;
+	//cv::Point min_loc, max_loc;
+	//cv::minMaxLoc(result_x, &min, &max, &min_loc, &max_loc);
+	//cout << max << endl;
+	//cout << min << endl;
 	result_x.convertTo(result_x, CV_8U);
 	//imshow("sobel_x", result_x);
 	image_show(result_x, 1, "sobel_x");
@@ -1342,10 +1500,349 @@ void two_fd_jd_test()
 	image_show(result_45f, 1, "sobel_45f");
 }
 
+//Marr-Hildreth算子
+//float LoG(float x,float y,float var=0.1){
+//	float result;
+//	result = (x*x + y*y - 2*var*var)/pow(var,4)*exp(-1*(x*x + y*y)/(2*var*var));
+//	return result;
+//}
+//
+//void set_Marr_Hildreth_filter()
+//{
+//	    int M = 5;
+//		int N = 5;
+//		for (size_t i = 0; i <M; i++)
+//		  {  for (size_t j = 0; j <N; j++)
+//			   { 
+//			     cout<<LoG((float)j,(float)i,0.353553)<<endl;
+//			   }
+//		  }	
+//}
+
+//零交叉
+texture <int, cudaTextureType2D, cudaReadModeElementType> refTex_zero;//用于计算双线性插值
+
+cudaArray* cuArray_zero;//声明CUDA数组
+
+//通道数
+cudaChannelFormatDesc cuDesc_zero = cudaCreateChannelDesc<int>();//通道数
+
+////空间滤波
+__global__ void zero_Kerkel(int* pDstImgData, int imgHeight_des_d, int imgWidth_des_d,int mark)
+{   
+	const int tidx = blockDim.x * blockIdx.x + threadIdx.x;
+	const int tidy = blockDim.y * blockIdx.y + threadIdx.y;
+	//if(tidx < imgWidth_des_d && tidy < imgHeight_des_d)
+	//  { //int idx = tidy * imgWidth_des_d + tidx;
+	if (tidx < imgWidth_des_d && tidy < imgHeight_des_d)
+	{
+		    pDstImgData[tidy * imgWidth_des_d + tidx] = 0;
+			//左右
+			if ((int)(tex2D(refTex_zero, tidx - 1, tidy)*tex2D(refTex_zero, tidx + 1, tidy)) < 0 && 0 < tidx && tidx < imgWidth_des_d - 1 && 0 < tidy && tidy < imgHeight_des_d - 1)
+			{
+				if (tex2D(refTex_zero, tidx - 1, tidy) > 0 && tex2D(refTex_zero, tidx + 1, tidy) < 0)
+				{
+					if (abs(tex2D(refTex_zero, tidx + 1, tidy)) > mark)
+					{
+						pDstImgData[tidy * imgWidth_des_d + tidx + 1] = 255;
+					}
+					//if(abs(tex2D(refTex_zero, tidx-1, tidy))>mark)
+					pDstImgData[tidy * imgWidth_des_d + tidx - 1] = 0;
+
+				}
+				else {
+
+					//if (abs(tex2D(refTex_zero, tidx + 1, tidy)) > mark)
+					pDstImgData[tidy * imgWidth_des_d + tidx + 1] = 0;
+					if (abs(tex2D(refTex_zero, tidx - 1, tidy)) > mark)
+						pDstImgData[tidy * imgWidth_des_d + tidx - 1] = 255;
+					//printf("%d,%d,%d,%d \n", pDstImgData[tidy * imgWidth_des_d + tidx - 1], pDstImgData[tidy * imgWidth_des_d + tidx + 1], tex2D(refTex_zero, tidx - 1, tidy), tex2D(refTex_zero, tidx + 1, tidy));
+				}
+
+			}
+
+		//上下
+		if ((int)(tex2D(refTex_zero, tidx, tidy - 1)*tex2D(refTex_zero, tidx, tidy + 1)) < 0 && 0 < tidx && tidx < imgWidth_des_d - 1 && 0 < tidy && tidy < imgHeight_des_d - 1)
+		{
+			if (tex2D(refTex_zero, tidx, tidy - 1) > 0 && tex2D(refTex_zero, tidx, tidy + 1) < 0)
+			{
+				//if (abs(tex2D(refTex_zero, tidx, tidy-1)) > mark)
+				pDstImgData[(tidy - 1) * imgWidth_des_d + tidx] = 0;
+				if (abs(tex2D(refTex_zero, tidx, tidy + 1)) > mark)
+					pDstImgData[(tidy + 1) * imgWidth_des_d + tidx] = 255;
+				//printf("%d,%d,%d,%d \n", pDstImgData[(tidy-1) * imgWidth_des_d + tidx ], pDstImgData[(tidy+1) * imgWidth_des_d + tidx], tex2D(refTex_zero, tidx, tidy-1), tex2D(refTex_zero, tidx, tidy+1));
+			}
+			else {
+
+				if (abs(tex2D(refTex_zero, tidx, tidy - 1)) > mark)
+				{
+					pDstImgData[(tidy - 1) * imgWidth_des_d + tidx] = 255;
+				}
+				//if (abs(tex2D(refTex_zero, tidx, tidy + 1)) > mark)
+				pDstImgData[(tidy + 1) * imgWidth_des_d + tidx] = 0;
+			}
+
+		}
+
+		////45+
+		if ((int)(tex2D(refTex_zero, tidx - 1, tidy + 1)*tex2D(refTex_zero, tidx + 1, tidy - 1)) < 0 && 0 < tidx && tidx < imgWidth_des_d - 1 && 0 < tidy && tidy < imgHeight_des_d - 1)
+		{
+			if (tex2D(refTex_zero, tidx + 1, tidy - 1) > 0 && tex2D(refTex_zero, tidx - 1, tidy + 1) < 0)
+			{
+				if (abs(tex2D(refTex_zero, tidx - 1, tidy + 1)) > mark)
+				{
+					pDstImgData[(tidy + 1) * imgWidth_des_d + tidx - 1] = 255;
+				}
+				//if (abs(tex2D(refTex_zero, tidx + 1, tidy - 1)) > mark)
+				pDstImgData[(tidy - 1) * imgWidth_des_d + tidx + 1] = 0;
+			}
+			else {
+				//if (abs(tex2D(refTex_zero, tidx - 1, tidy + 1)) > mark)
+				pDstImgData[(tidy + 1) * imgWidth_des_d + tidx - 1] = 0;
+				if (abs(tex2D(refTex_zero, tidx + 1, tidy - 1)) > mark)
+					pDstImgData[(tidy - 1) * imgWidth_des_d + tidx + 1] = 255;
+			}
+
+		}
+
+		////45-
+		if ((int)(tex2D(refTex_zero, tidx - 1, tidy - 1)*tex2D(refTex_zero, tidx + 1, tidy + 1)) < 0 && 0 < tidx && tidx < imgWidth_des_d - 1 && 0 < tidy && tidy < imgHeight_des_d - 1)
+		{
+			if (tex2D(refTex_zero, tidx - 1, tidy - 1) > 0 && tex2D(refTex_zero, tidx + 1, tidy + 1) < 0)
+			{
+				//if (abs(tex2D(refTex_zero, tidx - 1, tidy - 1)) > mark)
+				pDstImgData[(tidy - 1) * imgWidth_des_d + tidx - 1] = 0;
+				if (abs(tex2D(refTex_zero, tidx + 1, tidy + 1)) > mark)
+					pDstImgData[(tidy + 1) * imgWidth_des_d + tidx + 1] = 255;
+			}
+			else {
+				if (abs(tex2D(refTex_zero, tidx - 1, tidy - 1)) > mark)
+				{
+					pDstImgData[(tidy - 1) * imgWidth_des_d + tidx - 1] = 255;
+				}
+				//if (abs(tex2D(refTex_zero, tidx + 1, tidy + 1)) > mark)
+				pDstImgData[(tidy + 1) * imgWidth_des_d + tidx + 1] = 0;
+			}
+		}
+
+				//左右
+				//if((int)(tex2D(refTex_zero, tidx-1, tidy)*tex2D(refTex_zero, tidx+1, tidy))<0  && 0 < tidx && tidx < imgWidth_des_d - 1 && 0 < tidy && tidy < imgHeight_des_d - 1)
+		  //        {    
+				//			pDstImgData[tidy * imgWidth_des_d + tidx] = 255;
+			
+				//  }
+
+				////上下
+				//if((int)(tex2D(refTex_zero, tidx, tidy-1)*tex2D(refTex_zero, tidx , tidy+1)) < 0 && 0 < tidx && tidx < imgWidth_des_d - 1 && 0 < tidy && tidy < imgHeight_des_d - 1)
+				//  {
+				//
+				//	pDstImgData[tidy * imgWidth_des_d + tidx] = 255;
+				//  }
+
+				//////45+
+				//if((int)(tex2D(refTex_zero, tidx-1, tidy+1)*tex2D(refTex_zero, tidx+1, tidy-1)) < 0 && 0<tidx && tidx<imgWidth_des_d-1 && 0 < tidy && tidy < imgHeight_des_d - 1)
+				//  {
+				//	pDstImgData[tidy * imgWidth_des_d + tidx] = 255;
+
+				//  }
+
+				//////45-
+				//if((int)(tex2D(refTex_zero, tidx-1, tidy-1)*tex2D(refTex_zero, tidx+1, tidy+1)) < 0 && 0 < tidx && tidx < imgWidth_des_d - 1 && 0 < tidy && tidy < imgHeight_des_d - 1)
+				//  {
+				//	pDstImgData[tidy * imgWidth_des_d + tidx] = 255;
+				//  }
+		}
+
+}
+
+template<class T>
+Mat zero_crossing(Mat image)
+{
+	Mat Lena = image.clone();
+	Lena.convertTo(Lena, CV_32S);
+
+	int x_rato_less = 1.0;
+	int y_rato_less = 1.0;
+
+	int imgWidth_src = Lena.cols;//原图像宽
+	int imgHeight_src = Lena.rows;//原图像高
+	int channels = Lena.channels();
+
+	int imgWidth_des_less = floor(imgWidth_src * x_rato_less);//缩小图像
+	int imgHeight_des_less = floor(imgHeight_src * y_rato_less);//缩小图像
+
+	//设置1纹理属性
+	cudaError_t t;
+	refTex_zero.addressMode[0] = cudaAddressModeClamp;
+	refTex_zero.addressMode[1] = cudaAddressModeClamp;
+	refTex_zero.normalized = false;
+	refTex_zero.filterMode = cudaFilterModePoint;
+	//绑定cuArray到纹理
+	cudaMallocArray(&cuArray_zero, &cuDesc_zero, imgWidth_src, imgHeight_src);
+	t = cudaBindTextureToArray(refTex_zero, cuArray_zero);
+	//拷贝数据到cudaArray
+	t = cudaMemcpyToArray(cuArray_zero, 0, 0, Lena.data, imgWidth_src * imgHeight_src * sizeof(int), cudaMemcpyHostToDevice);
+
+	//输出放缩以后在cpu上图像
+	//Lena.convertTo(Lena, CV_32S);
+
+	Mat dstImg1 = Mat::zeros(imgHeight_des_less, imgWidth_des_less, CV_32SC1);//缩小
+
+	//输出放缩以后在cuda上的图像
+	int* pDstImgData1 = NULL;
+	t = cudaMalloc(&pDstImgData1, imgHeight_des_less * imgWidth_des_less * sizeof(int));
+	t = cudaMemcpy(pDstImgData1, Lena.data, imgWidth_des_less * imgHeight_des_less * sizeof(int)*channels, cudaMemcpyHostToDevice);
+
+	dim3 block(16, 16);
+	dim3 grid((imgWidth_des_less + block.x - 1) / block.x, (imgHeight_des_less + block.y - 1) / block.y);
+
+	zero_Kerkel<<<grid, block >>> (pDstImgData1, imgHeight_des_less, imgWidth_des_less,1);
+	cudaDeviceSynchronize();
+
+	//从GPU拷贝输出数据到CPU
+	t = cudaMemcpy(dstImg1.data, pDstImgData1, imgWidth_des_less * imgHeight_des_less * sizeof(int)*channels, cudaMemcpyDeviceToHost);
+	cudaFree(cuArray_space_filter);
+	cudaFree(pDstImgData1);
+	return dstImg1.clone();
+}
+
+//直接利用 LoG核进行计算 ,来源网上
+void marrEdge(const Mat src, Mat& result, int kerValue,
+	double delta)
+{
+	// 计算LOG算子
+	Mat kernel;
+	// 半径
+	int kerLen = kerValue / 2;
+	kernel = Mat_<double>(kerValue, kerValue);
+	// 滑窗
+	for (int i = -kerLen; i <= kerLen; i++)
+	{
+		for (int j = -kerLen; j <= kerLen; j++)
+		{
+			// 核因子生成
+			kernel.at<double>(i + kerLen, j + kerLen) =
+				exp(-((pow(j, 2) + pow(i, 2)) /
+				(pow(delta, 2) * 2)))
+				* (((pow(j, 2) + pow(i, 2) - 2 *
+					pow(delta, 2)) / (2 * pow(delta, 4))));
+			/*kernel.at<double>(i + kerLen, j + kerLen) =
+				exp(-((pow(j, 2) + pow(i, 2)) /
+				(pow(delta, 2) * 2)));*/
+		}
+	}
+
+	// 输出参数设置
+	int kerOffset = kerValue / 2;
+	Mat laplacian = (Mat_<double>(src.rows - kerOffset * 2,
+		src.cols - kerOffset * 2));
+	result = Mat::zeros(src.rows - kerOffset * 2,
+		src.cols - kerOffset * 2, src.type());
+	double sumLaplacian;
+	// 遍历计算卷积图像的Lapace算子
+	for (int i = kerOffset; i < src.rows - kerOffset; ++i)
+	{
+		for (int j = kerOffset; j < src.cols - kerOffset; ++j)
+		{
+			sumLaplacian = 0;
+			for (int k = -kerOffset; k <= kerOffset; ++k)
+			{
+				for (int m = -kerOffset; m <= kerOffset; ++m)
+				{
+					// 计算图像卷积
+					sumLaplacian += src.at<uchar>(i + k, j + m) *
+						kernel.at<double>(kerOffset + k,
+							kerOffset + m);
+				}
+			}
+			// 生成Lapace结果
+			laplacian.at<double>(i - kerOffset,
+				j - kerOffset) = sumLaplacian;
+		}
+	}
+
+	//// 过零点交叉 寻找边缘像素
+	//for (int y = 1; y < result.rows - 1; ++y)
+	//{
+	//	for (int x = 1; x < result.cols - 1; ++x)
+	//	{
+	//		result.at<uchar>(y, x) = 0;
+	//		// 邻域判定
+	//		if (laplacian.at<double>(y - 1, x) *
+	//			laplacian.at<double>(y + 1, x) < 0)
+	//		{
+	//			result.at<uchar>(y, x) = 255;
+	//		}
+	//		if (laplacian.at<double>(y, x - 1) *
+	//			laplacian.at<double>(y, x + 1) < 0)
+	//		{
+	//			result.at<uchar>(y, x) = 255;
+	//		}
+	//		if (laplacian.at<double>(y + 1, x - 1) *
+	//			laplacian.at<double>(y - 1, x + 1) < 0)
+	//		{
+	//			result.at<uchar>(y, x) = 255;
+	//		}
+	//		if (laplacian.at<double>(y - 1, x - 1) *
+	//			laplacian.at<double>(y + 1, x + 1) < 0)
+	//		{
+	//			result.at<uchar>(y, x) = 255;
+	//		}
+	//	}
+	//}
+}
+
+void LoG_test()
+{
+	Mat Lena = imread("C:/Users/Administrator/Desktop/opencv/house2.png");
+	cvtColor(Lena, Lena, COLOR_BGR2GRAY);//转换为灰度图
+	image_show(Lena, 1, "原图");
+
+	//先高通滤波，后拉普拉斯变换
+	//filter_screem<float>* filter_G = set_filter<float>(Gauss25);
+	//Mat GSmat = space_filter_cpu_mat(Lena, filter_G->len, filter_G->postion, filter_G->data, 1);
+
+	//filter_screem<int>* filter_x = set_filter<int>(Laplace8);
+	//Mat result_x = space_filter_cpu_mat(GSmat, filter_x->len, filter_x->postion, filter_x->data, 1);
+
+	//直接计算LOG算子
+	filter_screem<float>* filter_x = set_filter<float>(LoG);
+	Mat result_x = space_filter_cpu_mat(Lena, filter_x->len, filter_x->postion, filter_x->data, 1);
+	
+	Mat show = result_x.clone();
+	demarcate(show);
+	image_show(show, 1, "show");
+
+	Mat e=result_x.clone();
+	e.convertTo(e, CV_8U);
+
+	result_x=zero_crossing<int>(result_x);
+	
+	result_x.convertTo(result_x, CV_8U);
+	image_show(result_x, 1, "HARR-HILL-zeros");
+
+	double max, min;
+	cv::Point min_loc, max_loc;
+	cv::minMaxLoc(e, &min, &max, &min_loc, &max_loc);
+	cout << "max:" << max << endl;
+	cout << "min:" << min << endl;
+	int max_N = (int)max * 0.07;
+	threshold(e, e, max_N, 255, 0);
+	image_show(e, 1, "HARR-HILL-threshold");
+	//cv::Mat srcImage = cv::imread("C:/Users/Administrator/Desktop/opencv/house2.png", 0);
+	//cv::Mat edge;
+	//marrEdge(srcImage, edge, 9, 1.6);
+	//cv::imshow("srcImage", srcImage);
+	//cv::imshow("edge", edge);
+	//cv::waitKey(0);
+}
 
 void chapter10_test()
-{
-	//single_point();
+{   //single_point();
 	//line_test();
-	two_fd_jd_test();
+	//two_fd_jd_test();
+	//set_Marr_Hildreth_filter();
+	LoG_test();
 };
+
+
