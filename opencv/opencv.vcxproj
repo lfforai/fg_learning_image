@@ -87,6 +87,7 @@
     <CudaCompile Include="image_scale1.cu" />
     <CudaCompile Include="image_scale2.cu" />
     <CudaCompile Include="opencv_chapter9.cu" />
+    <CudaCompile Include="spacefilter_gpu.cu" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="..\..\..\..\Desktop\I.png" />
@@ -127,6 +128,7 @@
     <ClInclude Include="opencv_chapter4.h" />
     <ClInclude Include="opencv_DFT.h" />
     <ClInclude Include="opencv_DWT.h" />
+    <ClInclude Include="spacefilter_gpu.cuh" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="cudatool.cu" />

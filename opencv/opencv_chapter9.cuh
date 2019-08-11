@@ -12,6 +12,7 @@
 #include <curand.h>
 #include "cufft.h"
 #include "opencv_DFT.h"
+#include "spacefilter_gpu.cuh"
 
 //// Utilities and timing functions
 //#include <helper_functions.h>    // includes cuda.h and cuda_runtime_api.h
@@ -21,11 +22,11 @@
 using namespace std;
 using namespace cv;
 
-
 __device__ __host__  struct Point_gpu {
 	float x;
 	float y;
 };
+
 
 //¶þÖµ»¯°æ
 struct se_tpye {
@@ -125,5 +126,10 @@ struct filter_screem {
 	}
 };
 
-
+template<class arraytype >
+Mat zero_crossing(Mat image, arraytype mark);
+Mat normal_detect(const Mat& image_N);
+Mat limit_big(const Mat& image_N, const Mat& direct);
+Mat threashold_rato(Mat& e_N, float rato);
+Mat Edge_lengthening(Mat& gNH, Mat& gNL, Mat& mark);
 void chapter10_test();

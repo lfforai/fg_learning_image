@@ -39,6 +39,7 @@ struct Met_oe_info {
 };
 
 //Õ®”√api
+bool matIsEqual(const cv::Mat mat1, const cv::Mat mat2);
 Mat fourior_inverser(Mat &src_img, cv::Mat &real_img, cv::Mat &ima_img);
 Mat fast_dft(cv::Mat &src_img, cv::Mat &real_img, cv::Mat &ima_img);
 void move_to_center(Mat &center_img);

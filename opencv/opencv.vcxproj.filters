@@ -116,6 +116,9 @@
     <CudaCompile Include="opencv_chapter9.cu">
       <Filter>opencv</Filter>
     </CudaCompile>
+    <CudaCompile Include="spacefilter_gpu.cu">
+      <Filter>cudatool</Filter>
+    </CudaCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="cufft.cuh">
@@ -153,6 +156,9 @@
     </ClInclude>
     <ClInclude Include="opencv_chapter9.cuh">
       <Filter>opencv</Filter>
+    </ClInclude>
+    <ClInclude Include="spacefilter_gpu.cuh">
+      <Filter>cudatool</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -7,6 +7,8 @@
 #include "opencv_DWT.h"
 #include "opencv_chapter9.cuh"
 #include "opencv_chapter10.cuh"
+#include "spacefilter_gpu.cuh"
+
 
 //系统包
 #include <opencv2/opencv.hpp>
@@ -136,6 +138,9 @@ int main()
   //morphology_test(4, 4,1);
  //morphology_test(15, 15,1);
  //chapter10();
+ //LoG_test();
+ //canny_test();
+ Partial_treatment();
  waitKey(0);
 }
 

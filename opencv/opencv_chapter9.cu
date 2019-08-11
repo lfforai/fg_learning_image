@@ -1111,11 +1111,15 @@ __global__ void space_filter_Kerkel(int* pDstImgData, int imgHeight_des_d, int i
 {   //printf("threadIdx,x=%d",threadIdx.x);
 	const int tidx = blockDim.x * blockIdx.x + threadIdx.x;
 	const int tidy = blockDim.y * blockIdx.y + threadIdx.y;
-	if (tidx < imgWidth_des_d && tidy < imgHeight_des_d)
-	{
+	//if (tidx == 0 && tidy == 0) {
+	//	printf("%f \n", atan2(-1.0, 1.0)/(2.0*3.1415926)*360.0);
+	//}
+
+	if(tidx < imgWidth_des_d && tidy < imgHeight_des_d)
+	  {
 		int idx = tidy * imgWidth_des_d + tidx;
 		pDstImgData[idx] = spacefilter<T>(tidx, tidy, point_gpu, data, len);
-	}
+	  }
 }
 
 template<class T>
@@ -1377,8 +1381,8 @@ filter_screem<T>* set_filter(spacefilter_mode mode){
 	  int M = 3;
 	  int N = 3;
 	  filter->init(M, N);
-	  int src[9] = { -1,-1,-1,-1,8,-1,-1,-1,-1 };
-	  cudaMemcpy(filter->data, src, sizeof(int)*N*M, cudaMemcpyDefault);
+	  float src[9] = { 1.0,1.0,1.0,1.0,-8.0,1.0,1.0,1.0,1.0 };
+	  cudaMemcpy(filter->data, src, sizeof(float)*N*M, cudaMemcpyDefault);
   }
 
 
@@ -1500,166 +1504,163 @@ void two_fd_jd_test()
 	image_show(result_45f, 1, "sobel_45f");
 }
 
-//Marr-Hildreth算子
-//float LoG(float x,float y,float var=0.1){
-//	float result;
-//	result = (x*x + y*y - 2*var*var)/pow(var,4)*exp(-1*(x*x + y*y)/(2*var*var));
-//	return result;
-//}
-//
-//void set_Marr_Hildreth_filter()
-//{
-//	    int M = 5;
-//		int N = 5;
-//		for (size_t i = 0; i <M; i++)
-//		  {  for (size_t j = 0; j <N; j++)
-//			   { 
-//			     cout<<LoG((float)j,(float)i,0.353553)<<endl;
-//			   }
-//		  }	
-//}
-
 //零交叉
-texture <int, cudaTextureType2D, cudaReadModeElementType> refTex_zero;//用于计算双线性插值
+template<class arraytype>
+texture <arraytype, cudaTextureType2D, cudaReadModeElementType> refTex_zero;//用于计算双线性插值
 
 cudaArray* cuArray_zero;//声明CUDA数组
 
 //通道数
-cudaChannelFormatDesc cuDesc_zero = cudaCreateChannelDesc<int>();//通道数
+template<class arraytype>
+cudaChannelFormatDesc cuDesc_zero = cudaCreateChannelDesc<arraytype>();//通道数
 
 ////空间滤波
-__global__ void zero_Kerkel(int* pDstImgData, int imgHeight_des_d, int imgWidth_des_d,int mark)
+template<class arraytype>
+__global__ void zero_Kerkel(arraytype* pDstImgData, int imgHeight_des_d, int imgWidth_des_d,arraytype mark)
 {   
 	const int tidx = blockDim.x * blockIdx.x + threadIdx.x;
 	const int tidy = blockDim.y * blockIdx.y + threadIdx.y;
-	//if(tidx < imgWidth_des_d && tidy < imgHeight_des_d)
-	//  { //int idx = tidy * imgWidth_des_d + tidx;
-	if (tidx < imgWidth_des_d && tidy < imgHeight_des_d)
-	{
+	if(tidx < imgWidth_des_d && tidy < imgHeight_des_d)
+	  {     int idx = tidy * imgWidth_des_d + tidx;
 		    pDstImgData[tidy * imgWidth_des_d + tidx] = 0;
-			//左右
-			if ((int)(tex2D(refTex_zero, tidx - 1, tidy)*tex2D(refTex_zero, tidx + 1, tidy)) < 0 && 0 < tidx && tidx < imgWidth_des_d - 1 && 0 < tidy && tidy < imgHeight_des_d - 1)
-			{
-				if (tex2D(refTex_zero, tidx - 1, tidy) > 0 && tex2D(refTex_zero, tidx + 1, tidy) < 0)
-				{
-					if (abs(tex2D(refTex_zero, tidx + 1, tidy)) > mark)
-					{
-						pDstImgData[tidy * imgWidth_des_d + tidx + 1] = 255;
-					}
-					//if(abs(tex2D(refTex_zero, tidx-1, tidy))>mark)
-					pDstImgData[tidy * imgWidth_des_d + tidx - 1] = 0;
 
-				}
-				else {
+			//if (tidx < imgWidth_des_d && tidy < imgHeight_des_d)
+			//{
+			//	int idx = tidy * imgWidth_des_d + tidx;
+			//	pDstImgData[tidy * imgWidth_des_d + tidx] = 0;
 
-					//if (abs(tex2D(refTex_zero, tidx + 1, tidy)) > mark)
-					pDstImgData[tidy * imgWidth_des_d + tidx + 1] = 0;
-					if (abs(tex2D(refTex_zero, tidx - 1, tidy)) > mark)
-						pDstImgData[tidy * imgWidth_des_d + tidx - 1] = 255;
-					//printf("%d,%d,%d,%d \n", pDstImgData[tidy * imgWidth_des_d + tidx - 1], pDstImgData[tidy * imgWidth_des_d + tidx + 1], tex2D(refTex_zero, tidx - 1, tidy), tex2D(refTex_zero, tidx + 1, tidy));
-				}
+			//	//	//左右
+			//	//	if ((int)(tex2D(refTex_zero, tidx - 1, tidy)*tex2D(refTex_zero, tidx + 1, tidy)) < 0 && 0 < tidx && tidx < imgWidth_des_d - 1 && 0 < tidy && tidy < imgHeight_des_d - 1)
+			//	//	{
+			//	//		if (tex2D(refTex_zero, tidx - 1, tidy) > 0 && tex2D(refTex_zero, tidx + 1, tidy) < 0)
+			//	//		{
+			//	//			if (abs(tex2D(refTex_zero, tidx + 1, tidy)) > mark)
+			//	//			{
+			//	//				pDstImgData[tidy * imgWidth_des_d + tidx + 1] = 255;
+			//	//			}
+			//	//			//if(abs(tex2D(refTex_zero, tidx-1, tidy))>mark)
+			//	//			pDstImgData[tidy * imgWidth_des_d + tidx - 1] = 0;
 
-			}
+			//	//		}
+			//	//		else {
 
-		//上下
-		if ((int)(tex2D(refTex_zero, tidx, tidy - 1)*tex2D(refTex_zero, tidx, tidy + 1)) < 0 && 0 < tidx && tidx < imgWidth_des_d - 1 && 0 < tidy && tidy < imgHeight_des_d - 1)
-		{
-			if (tex2D(refTex_zero, tidx, tidy - 1) > 0 && tex2D(refTex_zero, tidx, tidy + 1) < 0)
-			{
-				//if (abs(tex2D(refTex_zero, tidx, tidy-1)) > mark)
-				pDstImgData[(tidy - 1) * imgWidth_des_d + tidx] = 0;
-				if (abs(tex2D(refTex_zero, tidx, tidy + 1)) > mark)
-					pDstImgData[(tidy + 1) * imgWidth_des_d + tidx] = 255;
-				//printf("%d,%d,%d,%d \n", pDstImgData[(tidy-1) * imgWidth_des_d + tidx ], pDstImgData[(tidy+1) * imgWidth_des_d + tidx], tex2D(refTex_zero, tidx, tidy-1), tex2D(refTex_zero, tidx, tidy+1));
-			}
-			else {
+			//	//			//if (abs(tex2D(refTex_zero, tidx + 1, tidy)) > mark)
+			//	//			pDstImgData[tidy * imgWidth_des_d + tidx + 1] = 0;
+			//	//			if (abs(tex2D(refTex_zero, tidx - 1, tidy)) > mark)
+			//	//				pDstImgData[tidy * imgWidth_des_d + tidx - 1] = 255;
+			//	//			//printf("%d,%d,%d,%d \n", pDstImgData[tidy * imgWidth_des_d + tidx - 1], pDstImgData[tidy * imgWidth_des_d + tidx + 1], tex2D(refTex_zero, tidx - 1, tidy), tex2D(refTex_zero, tidx + 1, tidy));
+			//	//		}
 
-				if (abs(tex2D(refTex_zero, tidx, tidy - 1)) > mark)
-				{
-					pDstImgData[(tidy - 1) * imgWidth_des_d + tidx] = 255;
-				}
-				//if (abs(tex2D(refTex_zero, tidx, tidy + 1)) > mark)
-				pDstImgData[(tidy + 1) * imgWidth_des_d + tidx] = 0;
-			}
+			//	//	}
 
-		}
+			//	////上下
+			//	//if ((int)(tex2D(refTex_zero, tidx, tidy - 1)*tex2D(refTex_zero, tidx, tidy + 1)) < 0 && 0 < tidx && tidx < imgWidth_des_d - 1 && 0 < tidy && tidy < imgHeight_des_d - 1)
+			//	//{
+			//	//	if (tex2D(refTex_zero, tidx, tidy - 1) > 0 && tex2D(refTex_zero, tidx, tidy + 1) < 0)
+			//	//	{
+			//	//		//if (abs(tex2D(refTex_zero, tidx, tidy-1)) > mark)
+			//	//		pDstImgData[(tidy - 1) * imgWidth_des_d + tidx] = 0;
+			//	//		if (abs(tex2D(refTex_zero, tidx, tidy + 1)) > mark)
+			//	//			pDstImgData[(tidy + 1) * imgWidth_des_d + tidx] = 255;
+			//	//		//printf("%d,%d,%d,%d \n", pDstImgData[(tidy-1) * imgWidth_des_d + tidx ], pDstImgData[(tidy+1) * imgWidth_des_d + tidx], tex2D(refTex_zero, tidx, tidy-1), tex2D(refTex_zero, tidx, tidy+1));
+			//	//	}
+			//	//	else {
 
-		////45+
-		if ((int)(tex2D(refTex_zero, tidx - 1, tidy + 1)*tex2D(refTex_zero, tidx + 1, tidy - 1)) < 0 && 0 < tidx && tidx < imgWidth_des_d - 1 && 0 < tidy && tidy < imgHeight_des_d - 1)
-		{
-			if (tex2D(refTex_zero, tidx + 1, tidy - 1) > 0 && tex2D(refTex_zero, tidx - 1, tidy + 1) < 0)
-			{
-				if (abs(tex2D(refTex_zero, tidx - 1, tidy + 1)) > mark)
-				{
-					pDstImgData[(tidy + 1) * imgWidth_des_d + tidx - 1] = 255;
-				}
-				//if (abs(tex2D(refTex_zero, tidx + 1, tidy - 1)) > mark)
-				pDstImgData[(tidy - 1) * imgWidth_des_d + tidx + 1] = 0;
-			}
-			else {
-				//if (abs(tex2D(refTex_zero, tidx - 1, tidy + 1)) > mark)
-				pDstImgData[(tidy + 1) * imgWidth_des_d + tidx - 1] = 0;
-				if (abs(tex2D(refTex_zero, tidx + 1, tidy - 1)) > mark)
-					pDstImgData[(tidy - 1) * imgWidth_des_d + tidx + 1] = 255;
-			}
+			//	//		if (abs(tex2D(refTex_zero, tidx, tidy - 1)) > mark)
+			//	//		{
+			//	//			pDstImgData[(tidy - 1) * imgWidth_des_d + tidx] = 255;
+			//	//		}
+			//	//		//if (abs(tex2D(refTex_zero, tidx, tidy + 1)) > mark)
+			//	//		pDstImgData[(tidy + 1) * imgWidth_des_d + tidx] = 0;
+			//	//	}
 
-		}
+			////	}
 
-		////45-
-		if ((int)(tex2D(refTex_zero, tidx - 1, tidy - 1)*tex2D(refTex_zero, tidx + 1, tidy + 1)) < 0 && 0 < tidx && tidx < imgWidth_des_d - 1 && 0 < tidy && tidy < imgHeight_des_d - 1)
-		{
-			if (tex2D(refTex_zero, tidx - 1, tidy - 1) > 0 && tex2D(refTex_zero, tidx + 1, tidy + 1) < 0)
-			{
-				//if (abs(tex2D(refTex_zero, tidx - 1, tidy - 1)) > mark)
-				pDstImgData[(tidy - 1) * imgWidth_des_d + tidx - 1] = 0;
-				if (abs(tex2D(refTex_zero, tidx + 1, tidy + 1)) > mark)
-					pDstImgData[(tidy + 1) * imgWidth_des_d + tidx + 1] = 255;
-			}
-			else {
-				if (abs(tex2D(refTex_zero, tidx - 1, tidy - 1)) > mark)
-				{
-					pDstImgData[(tidy - 1) * imgWidth_des_d + tidx - 1] = 255;
-				}
-				//if (abs(tex2D(refTex_zero, tidx + 1, tidy + 1)) > mark)
-				pDstImgData[(tidy + 1) * imgWidth_des_d + tidx + 1] = 0;
-			}
-		}
+			////	////45+
+			////	if ((int)(tex2D(refTex_zero, tidx - 1, tidy + 1)*tex2D(refTex_zero, tidx + 1, tidy - 1)) < 0 && 0 < tidx && tidx < imgWidth_des_d - 1 && 0 < tidy && tidy < imgHeight_des_d - 1)
+			////	{
+			////		if (tex2D(refTex_zero, tidx + 1, tidy - 1) > 0 && tex2D(refTex_zero, tidx - 1, tidy + 1) < 0)
+			////		{
+			////			if (abs(tex2D(refTex_zero, tidx - 1, tidy + 1)) > mark)
+			////			{
+			////				pDstImgData[(tidy + 1) * imgWidth_des_d + tidx - 1] = 255;
+			////			}
+			////			//if (abs(tex2D(refTex_zero, tidx + 1, tidy - 1)) > mark)
+			////			pDstImgData[(tidy - 1) * imgWidth_des_d + tidx + 1] = 0;
+			////		}
+			////		else {
+			////			//if (abs(tex2D(refTex_zero, tidx - 1, tidy + 1)) > mark)
+			////			pDstImgData[(tidy + 1) * imgWidth_des_d + tidx - 1] = 0;
+			////			if (abs(tex2D(refTex_zero, tidx + 1, tidy - 1)) > mark)
+			////				pDstImgData[(tidy - 1) * imgWidth_des_d + tidx + 1] = 255;
+			////		}
+
+			////	}
+
+			////	////45-
+			////	if ((int)(tex2D(refTex_zero, tidx - 1, tidy - 1)*tex2D(refTex_zero, tidx + 1, tidy + 1)) < 0 && 0 < tidx && tidx < imgWidth_des_d - 1 && 0 < tidy && tidy < imgHeight_des_d - 1)
+			////	{
+			////		if (tex2D(refTex_zero, tidx - 1, tidy - 1) > 0 && tex2D(refTex_zero, tidx + 1, tidy + 1) < 0)
+			////		{
+			////			//if (abs(tex2D(refTex_zero, tidx - 1, tidy - 1)) > mark)
+			////			pDstImgData[(tidy - 1) * imgWidth_des_d + tidx - 1] = 0;
+			////			if (abs(tex2D(refTex_zero, tidx + 1, tidy + 1)) > mark)
+			////				pDstImgData[(tidy + 1) * imgWidth_des_d + tidx + 1] = 255;
+			////		}
+			////		else {
+			////			if (abs(tex2D(refTex_zero, tidx - 1, tidy - 1)) > mark)
+			////			{
+			////				pDstImgData[(tidy - 1) * imgWidth_des_d + tidx - 1] = 255;
+			////			}
+			////			//if (abs(tex2D(refTex_zero, tidx + 1, tidy + 1)) > mark)
+			////			pDstImgData[(tidy + 1) * imgWidth_des_d + tidx + 1] = 0;
+			////		}
+			////	}
+			//}
 
 				//左右
-				//if((int)(tex2D(refTex_zero, tidx-1, tidy)*tex2D(refTex_zero, tidx+1, tidy))<0  && 0 < tidx && tidx < imgWidth_des_d - 1 && 0 < tidy && tidy < imgHeight_des_d - 1)
-		  //        {    
-				//			pDstImgData[tidy * imgWidth_des_d + tidx] = 255;
+				if((tex2D(refTex_zero<arraytype>, tidx-1, tidy)*tex2D(refTex_zero<arraytype>, tidx+1, tidy))<0 && abs(tex2D(refTex_zero<arraytype>, tidx - 1, tidy))- abs(tex2D(refTex_zero<arraytype>, tidx + 1, tidy))>mark && 0 < tidx && tidx < imgWidth_des_d - 1 && 0 < tidy && tidy < imgHeight_des_d - 1)
+		          {    
+							pDstImgData[idx] = 255;
 			
-				//  }
+				  }
 
-				////上下
-				//if((int)(tex2D(refTex_zero, tidx, tidy-1)*tex2D(refTex_zero, tidx , tidy+1)) < 0 && 0 < tidx && tidx < imgWidth_des_d - 1 && 0 < tidy && tidy < imgHeight_des_d - 1)
-				//  {
-				//
-				//	pDstImgData[tidy * imgWidth_des_d + tidx] = 255;
-				//  }
+				//上下
+				if((tex2D(refTex_zero<arraytype>, tidx, tidy-1)*tex2D(refTex_zero<arraytype>, tidx , tidy+1)) < 0 && abs(tex2D(refTex_zero<arraytype>, tidx, tidy-1)) - abs(tex2D(refTex_zero<arraytype>, tidx, tidy+1)) > mark && 0 < tidx && tidx < imgWidth_des_d - 1 && 0 < tidy && tidy < imgHeight_des_d - 1)
+				  {
+				
+					pDstImgData[idx] = 255;
+				  }
 
-				//////45+
-				//if((int)(tex2D(refTex_zero, tidx-1, tidy+1)*tex2D(refTex_zero, tidx+1, tidy-1)) < 0 && 0<tidx && tidx<imgWidth_des_d-1 && 0 < tidy && tidy < imgHeight_des_d - 1)
-				//  {
-				//	pDstImgData[tidy * imgWidth_des_d + tidx] = 255;
+				////45+
+				if((tex2D(refTex_zero<arraytype>, tidx-1, tidy+1)*tex2D(refTex_zero<arraytype>, tidx+1, tidy-1)) < 0 && abs(tex2D(refTex_zero<arraytype>, tidx - 1, tidy+1)) - abs(tex2D(refTex_zero<arraytype>, tidx + 1, tidy - 1)) > mark && 0<tidx && tidx<imgWidth_des_d-1 && 0 < tidy && tidy < imgHeight_des_d - 1)
+				  {
+					pDstImgData[idx] = 255;
 
-				//  }
+				  }
 
-				//////45-
-				//if((int)(tex2D(refTex_zero, tidx-1, tidy-1)*tex2D(refTex_zero, tidx+1, tidy+1)) < 0 && 0 < tidx && tidx < imgWidth_des_d - 1 && 0 < tidy && tidy < imgHeight_des_d - 1)
-				//  {
-				//	pDstImgData[tidy * imgWidth_des_d + tidx] = 255;
-				//  }
+				////45-
+				if((tex2D(refTex_zero<arraytype>, tidx-1, tidy-1)*tex2D(refTex_zero<arraytype>, tidx+1, tidy+1)) < 0 && abs(tex2D(refTex_zero<arraytype>, tidx - 1, tidy - 1)) - abs(tex2D(refTex_zero<arraytype>, tidx + 1, tidy + 1)) > mark && 0 < tidx && tidx < imgWidth_des_d - 1 && 0 < tidy && tidy < imgHeight_des_d - 1)
+				  {
+					pDstImgData[idx] = 255;
+				  }
 		}
 
 }
 
-template<class T>
-Mat zero_crossing(Mat image)
+template<class arraytype>
+Mat zero_crossing(Mat image,arraytype mark)
 {
 	Mat Lena = image.clone();
-	Lena.convertTo(Lena, CV_32S);
+	if (typeid(arraytype) == typeid(int))
+	{
+		Lena.convertTo(Lena, CV_32S);
+	}
+
+	if (typeid(arraytype) == typeid(float))
+	{
+		Lena.convertTo(Lena, CV_32F);
+	}
 
 	int x_rato_less = 1.0;
 	int y_rato_less = 1.0;
@@ -1673,43 +1674,55 @@ Mat zero_crossing(Mat image)
 
 	//设置1纹理属性
 	cudaError_t t;
-	refTex_zero.addressMode[0] = cudaAddressModeClamp;
-	refTex_zero.addressMode[1] = cudaAddressModeClamp;
-	refTex_zero.normalized = false;
-	refTex_zero.filterMode = cudaFilterModePoint;
+	refTex_zero<arraytype>.addressMode[0] = cudaAddressModeClamp;
+	refTex_zero<arraytype>.addressMode[1] = cudaAddressModeClamp;
+	refTex_zero<arraytype>.normalized = false;
+	refTex_zero<arraytype>.filterMode = cudaFilterModePoint;
 	//绑定cuArray到纹理
-	cudaMallocArray(&cuArray_zero, &cuDesc_zero, imgWidth_src, imgHeight_src);
-	t = cudaBindTextureToArray(refTex_zero, cuArray_zero);
+	cudaMallocArray(&cuArray_zero, &cuDesc_zero<arraytype>, imgWidth_src, imgHeight_src);
+	t = cudaBindTextureToArray(refTex_zero<arraytype>, cuArray_zero);
 	//拷贝数据到cudaArray
-	t = cudaMemcpyToArray(cuArray_zero, 0, 0, Lena.data, imgWidth_src * imgHeight_src * sizeof(int), cudaMemcpyHostToDevice);
+	t = cudaMemcpyToArray(cuArray_zero, 0, 0, Lena.data, imgWidth_src * imgHeight_src * sizeof(arraytype), cudaMemcpyHostToDevice);
 
 	//输出放缩以后在cpu上图像
 	//Lena.convertTo(Lena, CV_32S);
 
-	Mat dstImg1 = Mat::zeros(imgHeight_des_less, imgWidth_des_less, CV_32SC1);//缩小
+	Mat dstImg1;
+	if (typeid(arraytype) == typeid(int))
+	{
+		dstImg1 = Mat::zeros(imgHeight_des_less, imgWidth_des_less, CV_32SC1);//缩小
+	}
 
+	if (typeid(arraytype) == typeid(float))
+	{
+		dstImg1 = Mat::zeros(imgHeight_des_less, imgWidth_des_less, CV_32FC1);//缩小
+	}
+
+	 
 	//输出放缩以后在cuda上的图像
-	int* pDstImgData1 = NULL;
-	t = cudaMalloc(&pDstImgData1, imgHeight_des_less * imgWidth_des_less * sizeof(int));
-	t = cudaMemcpy(pDstImgData1, Lena.data, imgWidth_des_less * imgHeight_des_less * sizeof(int)*channels, cudaMemcpyHostToDevice);
+	arraytype* pDstImgData1 = NULL;
+	t = cudaMalloc(&pDstImgData1, imgHeight_des_less * imgWidth_des_less * sizeof(arraytype));
+	t = cudaMemcpy(pDstImgData1, Lena.data, imgWidth_des_less * imgHeight_des_less * sizeof(arraytype)*channels, cudaMemcpyHostToDevice);
 
 	dim3 block(16, 16);
 	dim3 grid((imgWidth_des_less + block.x - 1) / block.x, (imgHeight_des_less + block.y - 1) / block.y);
 
-	zero_Kerkel<<<grid, block >>> (pDstImgData1, imgHeight_des_less, imgWidth_des_less,1);
+	zero_Kerkel<arraytype><<<grid, block >>> (pDstImgData1, imgHeight_des_less, imgWidth_des_less,mark);
 	cudaDeviceSynchronize();
 
 	//从GPU拷贝输出数据到CPU
-	t = cudaMemcpy(dstImg1.data, pDstImgData1, imgWidth_des_less * imgHeight_des_less * sizeof(int)*channels, cudaMemcpyDeviceToHost);
+	t = cudaMemcpy(dstImg1.data, pDstImgData1, imgWidth_des_less * imgHeight_des_less * sizeof(arraytype)*channels, cudaMemcpyDeviceToHost);
 	cudaFree(cuArray_space_filter);
 	cudaFree(pDstImgData1);
 	return dstImg1.clone();
 }
+template Mat zero_crossing<int>(Mat,int);
+template Mat zero_crossing<float>(Mat,float);
 
 //直接利用 LoG核进行计算 ,来源网上
 void marrEdge(const Mat src, Mat& result, int kerValue,
 	double delta)
-{
+                        {
 	// 计算LOG算子
 	Mat kernel;
 	// 半径
@@ -1726,9 +1739,6 @@ void marrEdge(const Mat src, Mat& result, int kerValue,
 				(pow(delta, 2) * 2)))
 				* (((pow(j, 2) + pow(i, 2) - 2 *
 					pow(delta, 2)) / (2 * pow(delta, 4))));
-			/*kernel.at<double>(i + kerLen, j + kerLen) =
-				exp(-((pow(j, 2) + pow(i, 2)) /
-				(pow(delta, 2) * 2)));*/
 		}
 	}
 
@@ -1762,79 +1772,334 @@ void marrEdge(const Mat src, Mat& result, int kerValue,
 	}
 
 	//// 过零点交叉 寻找边缘像素
-	//for (int y = 1; y < result.rows - 1; ++y)
-	//{
-	//	for (int x = 1; x < result.cols - 1; ++x)
-	//	{
-	//		result.at<uchar>(y, x) = 0;
-	//		// 邻域判定
-	//		if (laplacian.at<double>(y - 1, x) *
-	//			laplacian.at<double>(y + 1, x) < 0)
-	//		{
-	//			result.at<uchar>(y, x) = 255;
-	//		}
-	//		if (laplacian.at<double>(y, x - 1) *
-	//			laplacian.at<double>(y, x + 1) < 0)
-	//		{
-	//			result.at<uchar>(y, x) = 255;
-	//		}
-	//		if (laplacian.at<double>(y + 1, x - 1) *
-	//			laplacian.at<double>(y - 1, x + 1) < 0)
-	//		{
-	//			result.at<uchar>(y, x) = 255;
-	//		}
-	//		if (laplacian.at<double>(y - 1, x - 1) *
-	//			laplacian.at<double>(y + 1, x + 1) < 0)
-	//		{
-	//			result.at<uchar>(y, x) = 255;
-	//		}
-	//	}
-	//}
+	for (int y = 1; y < result.rows - 1; ++y)
+	{
+		for (int x = 1; x < result.cols - 1; ++x)
+		{
+			result.at<uchar>(y, x) = 0;
+			// 邻域判定
+			if (laplacian.at<double>(y - 1, x) *
+				laplacian.at<double>(y + 1, x) < 0)
+			{
+				result.at<uchar>(y, x) = 255;
+			}
+			if (laplacian.at<double>(y, x - 1) *
+				laplacian.at<double>(y, x + 1) < 0)
+			{
+				result.at<uchar>(y, x) = 255;
+			}
+			if (laplacian.at<double>(y + 1, x - 1) *
+				laplacian.at<double>(y - 1, x + 1) < 0)
+			{
+				result.at<uchar>(y, x) = 255;
+			}
+			if (laplacian.at<double>(y - 1, x - 1) *
+				laplacian.at<double>(y + 1, x + 1) < 0)
+			{
+				result.at<uchar>(y, x) = 255;
+			}
+		}
+	}
 }
 
-void LoG_test()
+
+//-------------------------------坎尼算法边缘检测算法-----------------------------------
+//返回 梯度方向角
+Mat normal_detect(const Mat& image_N) {
+	Mat image = image_N.clone();
+	image.convertTo(image_N, CV_32F);
+	int sp = 1;
+	int f45 = 2;
+	int cz = 3;
+	int z45 = 4;
+	
+	int M = image.rows;
+	int N = image.cols;
+	
+	for (size_t i = 0; i <M; i++)
+		{  for (size_t j = 0; j <N; j++)
+			  { 
+		        float value=image.at<float>(i, j);
+				if (337.5< value  || value <= 22.5 || (value <=202.5&& 157.5 < value))
+					image.at<float>(i, j) = 1;
+				
+                if ((202.5 < value && value <= 247.5) || (value <= 67.5  && 22.5< value))
+					image.at<float>(i, j) = 2;
+				
+				if ((67.5 < value  && value <= 112.5) || (value <=292.5 && 247.5 < value))
+					image.at<float>(i, j) = 3;
+				
+				if ((112.5 < value  && value <= 157.5) || (value <=337.5 && 292.5 < value))
+					image.at<float>(i, j) = 4;
+			  }
+		}
+	return image.clone();
+}
+
+//限制非最大边缘点
+Mat limit_big(const Mat& image_N,const Mat& direct) {
+	Mat image = image_N.clone();
+	image.convertTo(image_N, CV_32F);
+    int M = image.rows;
+    int N = image.cols;
+	Mat gN = Mat::zeros(image.size(),CV_32F);
+
+	for (size_t i = 1; i <M-1; i++)
+		{  for (size_t j = 1; j <N-1; j++)
+			   { 
+				 if(direct.at<float>(i, j) == 1.0)//1
+					{
+					   float vlaue = image.at<float>(i, j);
+					   if (vlaue < image.at<float>(i + 1, j) || vlaue < image.at<float>(i - 1, j))
+						   gN.at<float>(i, j) = 0;
+					   else
+						   gN.at<float>(i, j) = vlaue;
+					}
+
+				 if (direct.at<float>(i, j) == 2.0)//1
+				 {
+					 float vlaue = image.at<float>(i, j);
+					 if (vlaue < image.at<float>(i -1, j-1) || vlaue < image.at<float>(i + 1, j+1))
+						 gN.at<float>(i, j) = 0;
+					 else
+						 gN.at<float>(i, j) = vlaue;
+				 }
+
+				 if (direct.at<float>(i, j) == 3.0)//1
+				 {
+					 float vlaue = image.at<float>(i, j);
+					 if (vlaue < image.at<float>(i, j - 1) || vlaue < image.at<float>(i, j + 1))
+						 gN.at<float>(i, j) = 0;
+					 else
+						 gN.at<float>(i, j) = vlaue;
+				 }
+
+				 if (direct.at<float>(i, j) == 4.0)//1
+				 {
+					 float vlaue = image.at<float>(i, j);
+					 if (vlaue < image.at<float>(i-1, j + 1) || vlaue < image.at<float>(i+1, j - 1))
+						 gN.at<float>(i, j) = 0;
+					 else
+						 gN.at<float>(i, j) = vlaue;
+				 }
+
+			   }
+		}
+	return gN.clone();
+}
+
+
+Mat threashold_rato(Mat& e_N,float rato) 
 {
-	Mat Lena = imread("C:/Users/Administrator/Desktop/opencv/house2.png");
-	cvtColor(Lena, Lena, COLOR_BGR2GRAY);//转换为灰度图
-	image_show(Lena, 1, "原图");
-
-	//先高通滤波，后拉普拉斯变换
-	//filter_screem<float>* filter_G = set_filter<float>(Gauss25);
-	//Mat GSmat = space_filter_cpu_mat(Lena, filter_G->len, filter_G->postion, filter_G->data, 1);
-
-	//filter_screem<int>* filter_x = set_filter<int>(Laplace8);
-	//Mat result_x = space_filter_cpu_mat(GSmat, filter_x->len, filter_x->postion, filter_x->data, 1);
-
-	//直接计算LOG算子
-	filter_screem<float>* filter_x = set_filter<float>(LoG);
-	Mat result_x = space_filter_cpu_mat(Lena, filter_x->len, filter_x->postion, filter_x->data, 1);
-	
-	Mat show = result_x.clone();
-	demarcate(show);
-	image_show(show, 1, "show");
-
-	Mat e=result_x.clone();
-	e.convertTo(e, CV_8U);
-
-	result_x=zero_crossing<int>(result_x);
-	
-	result_x.convertTo(result_x, CV_8U);
-	image_show(result_x, 1, "HARR-HILL-zeros");
-
+	Mat e = e_N.clone();
 	double max, min;
 	cv::Point min_loc, max_loc;
 	cv::minMaxLoc(e, &min, &max, &min_loc, &max_loc);
-	cout << "max:" << max << endl;
-	cout << "min:" << min << endl;
-	int max_N = (int)max * 0.07;
+	/*cout << "max:" << max << endl;
+	cout << "min:" << min << endl;*/
+	int max_N = (int)max * rato;
+	cout << "max_N:" << max_N<< endl;
 	threshold(e, e, max_N, 255, 0);
-	image_show(e, 1, "HARR-HILL-threshold");
-	//cv::Mat srcImage = cv::imread("C:/Users/Administrator/Desktop/opencv/house2.png", 0);
-	//cv::Mat edge;
-	//marrEdge(srcImage, edge, 9, 1.6);
-	//cv::imshow("srcImage", srcImage);
-	//cv::imshow("edge", edge);
-	//cv::waitKey(0);
+	return e.clone();
+}
+
+//边缘延长，利用8连通
+Mat Edge_lengthening(Mat& gNH, Mat& gNL,Mat& mark) {
+	Mat result=Mat::zeros(gNH.size(),CV_8U);
+	int M = gNH.rows;
+	int N = gNH.cols;
+	for (size_t i = 0; i < M; i++)
+	{
+		for (size_t j = 0; j < N; j++)
+		{
+			if (gNH.at<uchar>(i, j) == 255)
+			{ //8连通连接
+				if (gNL.at<uchar>(i - 1, j - 1) > 0 && mark.at<uchar>(i - 1, j - 1) == 0)//gNL必须是未标定并且==255
+				{
+					result.at<uchar>(i - 1, j - 1) = 255;
+					mark.at<uchar>(i - 1, j - 1) = 1;
+				}
+
+				if (gNL.at<uchar>(i - 1, j) > 0 && mark.at<uchar>(i - 1, j) == 0)
+				{
+					result.at<uchar>(i - 1, j) = 255;
+					mark.at<uchar>(i - 1, j) = 1;
+				}
+
+				if (gNL.at<uchar>(i - 1, j + 1) > 0 && mark.at<uchar>(i - 1, j + 1) == 0)
+				{
+					result.at<uchar>(i - 1, j + 1) = 255;
+					mark.at<uchar>(i - 1, j + 1) = 1;
+				}
+
+				if (gNL.at<uchar>(i, j - 1) > 0 && mark.at<uchar>(i, j - 1) == 0)
+				{
+					result.at<uchar>(i, j - 1) = 255;
+					mark.at<uchar>(i, j - 1) = 1;
+				}
+
+
+				if (gNL.at<uchar>(i, j + 1) > 0 && mark.at<uchar>(i, j + 1) == 0)
+				{
+					result.at<uchar>(i, j + 1) = 255;
+					mark.at<uchar>(i, j + 1) = 1;
+				}
+
+				if (gNL.at<uchar>(i + 1, j - 1) > 0 && mark.at<uchar>(i + 1, j - 1) == 0)
+				{
+					result.at<uchar>(i + 1, j - 1) = 255;
+					mark.at<uchar>(i + 1, j - 1) = 1;
+				}
+
+				if (gNL.at<uchar>(i + 1, j) > 0 && mark.at<uchar>(i + 1, j) == 0)
+				{
+					result.at<uchar>(i + 1, j) = 255;
+					mark.at<uchar>(i + 1, j) = 1;
+				}
+
+				if (gNL.at<uchar>(i + 1, j + 1) > 0 && mark.at<uchar>(i + 1, j + 1) == 0)
+				{
+					result.at<uchar>(i + 1, j + 1) = 255;
+					mark.at<uchar>(i + 1, j + 1) = 1;
+				}
+
+				//if (gNL.at<uchar>(i - 1, j - 1) > 0)//gNL必须是未标定并且==255
+				//{
+				//	result.at<uchar>(i - 1, j - 1) = 255;
+				//	gNL.at<uchar>(i - 1, j - 1) = 0;
+				//}
+
+				//if (gNL.at<uchar>(i - 1, j) > 0)
+				//{
+				//	result.at<uchar>(i - 1, j) = 255;
+				//	gNL.at<uchar>(i - 1, j) = 0;
+				//}
+
+				//if (gNL.at<uchar>(i - 1, j + 1) > 0)
+				//{
+				//	result.at<uchar>(i - 1, j + 1) = 255;
+				//	gNL.at<uchar>(i - 1, j + 1) == 0;
+				//}
+
+				//if (gNL.at<uchar>(i, j - 1) > 0 )
+				//{
+				//	result.at<uchar>(i, j - 1) = 255;
+				//	gNL.at<uchar>(i, j - 1) == 0;
+				//}
+
+
+				//if (gNL.at<uchar>(i, j + 1) > 0 )
+				//{
+				//	result.at<uchar>(i, j + 1) = 255;
+				//	gNL.at<uchar>(i, j + 1) == 0;
+				//}
+
+				//if (gNL.at<uchar>(i + 1, j - 1) > 0)
+				//{
+				//	result.at<uchar>(i + 1, j - 1) = 255;
+				//	gNL.at<uchar>(i + 1, j - 1) == 0;
+				//}
+
+				//if (gNL.at<uchar>(i + 1, j) > 0)
+				//{
+				//	result.at<uchar>(i + 1, j) = 255;
+				//	gNL.at<uchar>(i + 1, j) == 0;
+				//}
+
+				//if (gNL.at<uchar>(i + 1, j + 1) > 0)
+				//{
+				//	result.at<uchar>(i + 1, j + 1) = 255;
+				//	gNL.at<uchar>(i + 1, j + 1) == 0;
+				//}
+			}
+		}
+	}
+	return result.clone();
+}
+
+//坎尼检测器
+//void canny_test() {
+//	Mat Lena = imread("C:/Users/Administrator/Desktop/opencv/house2.png");
+//	cvtColor(Lena, Lena, COLOR_BGR2GRAY);//转换为灰度图
+//	image_show(Lena, 0.4, "原图");
+//
+//	//一、先高通滤波，后拉普拉斯变换
+//	filter_screem<float>* filter_G = set_filter<float>(Gauss25);
+//	Mat GSmat = space_filter_cpu_mat(Lena, filter_G->len, filter_G->postion, filter_G->data, 1);
+//	image_show(GSmat, 0.4, "高斯滤波器");
+//
+//	filter_screem<int>* filter_x = set_filter<int>(sobel_x);
+//	Mat soble_x = space_filter_cpu_mat(GSmat, filter_x->len, filter_x->postion, filter_x->data, 1);
+//	image_show(soble_x, 0.4, "soble_x");
+//
+//	filter_screem<int>* filter_y = set_filter<int>(sobel_y);
+//	Mat soble_y = space_filter_cpu_mat(GSmat, filter_y->len, filter_y->postion, filter_y->data, 1);
+//	image_show(soble_y, 0.4, "soble_y");
+//	
+//	//计算梯度幅度
+//	soble_x.convertTo(soble_x, CV_32F);
+//	soble_y.convertTo(soble_y, CV_32F);
+//	//cout << soble_y << endl;
+//	Mat M_xy;
+//	sqrt(soble_x.mul(soble_x) + soble_y.mul(soble_y), M_xy);
+//	//cout << M_xy << endl;
+//	
+//	//计算方向，转换为角度值
+//	Mat arctan;
+//	phase(soble_y, soble_x,arctan);
+//	arctan = arctan * 180 / 3.1415926;
+//	
+//	//寻找最接近角度的方向dk
+//	Mat direct=normal_detect(arctan);
+//	
+//	//一直对梯度图像应用非最大限制
+//	Mat mide = limit_big(M_xy, direct);
+//	image_show(mide, 0.4, "中间结果");
+//	//cout<<mide<<endl;
+//
+//	//计算gNL，gNH
+//	Mat mide_H = threashold_rato(mide, 0.10);//gNH
+//	image_show(mide_H, 0.4, "gNH");
+//	Mat mide_L = threashold_rato(mide, 0.04);//gNL
+//	image_show(mide_L, 0.4, "gNL");
+//	mide_L= mide_L - mide_H;//gNL=gNL-gNH
+//	image_show(mide_L, 0.4, "gNL-gNH");
+//
+//	//短线延长
+//	mide_H.convertTo(mide_H, CV_8U);
+//	mide_L.convertTo(mide_L, CV_8U);
+//	Mat mark = Mat::zeros(mide_H.size(), CV_8U);
+//	Mat gNH_increas_N=Edge_lengthening(mide_H,mide_L,mark);
+//	Mat gNH_increas= Mat::zeros(mide_H.size(), CV_8U);
+//	add(mide_H, gNH_increas_N, mide_H);
+//	
+//	int i = 0;
+//	Scalar ss = sum(gNH_increas_N);
+//	while(ss[0]>0){
+//	      gNH_increas = Edge_lengthening(gNH_increas_N,mide_L,mark);
+//		  add(mide_H,gNH_increas,mide_H);
+//		  gNH_increas_N = gNH_increas.clone();
+//		  ss = sum(gNH_increas);
+//		  i = i + 1;
+//	}
+//
+//	image_show(mide_H, 0.4, "fg_output");
+//
+//	//opencv 自带的canny
+//
+//	Mat output;
+//	//cv::Canny(Lena,output,7, 17,3,true);
+//	soble_x.convertTo(soble_x,CV_16SC1);
+//	soble_y.convertTo(soble_y, CV_16SC1);
+//	cv::Canny(soble_x, soble_y, output, 7, 17,true);
+//	image_show(output, 0.4, "opencv_output");
+//}
+
+
+void Edge_Connection_test() {
+    
+
+
 }
 
 void chapter10_test()
@@ -1842,7 +2107,8 @@ void chapter10_test()
 	//line_test();
 	//two_fd_jd_test();
 	//set_Marr_Hildreth_filter();
-	LoG_test();
+    // LoG_test();
+    //canny_test();
 };
 
 
