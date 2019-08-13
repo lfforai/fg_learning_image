@@ -60,7 +60,8 @@ enum sf_mode {
 
 	Laplace8_N = 6,
 	Gauss25_N = 7,
-	LoG_N = 8
+	LoG_N = 8,
+	avg_5=9 //5*5¾ùÖµÄ£°å
 };
 
 
@@ -69,6 +70,9 @@ Mat space_filter_gpu(char * path, Mat& image, int len, Point_f*  point_offset_N,
 
 template<class datatype>
 f_screem<datatype>* set_f(sf_mode mode);
+
+float Max_ofmat(Mat& H);
+Mat sobel_grad(Mat& image_N,int mode);
 
 void LoG_test();
 void canny_test();

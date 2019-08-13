@@ -12,3 +12,5 @@
 
 void graph_inverse(Mat& image_graph);
 void chapter3_test();
+cv::Mat getImageofHistogram(const cv::Mat &hist, int zoom);//ªÊ÷∆÷±∑ΩÕº
+void Histogram(Mat& image);

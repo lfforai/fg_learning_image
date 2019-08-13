@@ -16,6 +16,7 @@
 #include "opencv_chapter9.cuh"
 #include <time.h>
 #include "spacefilter_gpu.cuh"
+#include "opencv_chapter3.h"
 
 using namespace std;
 using namespace cv;

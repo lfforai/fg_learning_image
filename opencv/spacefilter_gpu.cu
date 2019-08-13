@@ -132,6 +132,18 @@ f_screem<datatype>* set_f(sf_mode mode) {
 		cudaMemcpy(filter->data, src, sizeof(datatype)*N*M, cudaMemcpyDefault);
 	}
 
+	if (mode == 9)//均值模板
+	{
+		int M = 5;
+		int N = 5;
+		filter->init(M, N);
+		int len = M * N;
+		datatype* src =(datatype *)malloc(M*N*sizeof(datatype));
+		for (size_t i = 0; i <len ; i++)
+		{src[i]=1.0/25.0;}
+		cudaMemcpy(filter->data, src, sizeof(datatype)*N*M, cudaMemcpyDefault);
+	}
+
 	return filter;
 }
 
@@ -254,6 +266,37 @@ Mat space_filter_gpu(char * path,Mat& image, int len, Point_f*  point_offset_N, 
 	return dstImg1.clone();
 }
 template Mat space_filter_gpu<float,float>(char*,Mat&,int, Point_f*, float* ,float);
+
+//返回计算sobel算子梯度
+Mat sobel_grad(Mat& image_N,int mode=0) {
+	Mat image = image_N.clone();
+	image.convertTo(image, CV_32F);
+	f_screem<float>* filter_x = set_f<float>(sf_mode::sobel_x_N);
+	Mat soble_x = space_filter_gpu<float, float>("", image, filter_x->len, filter_x->postion, filter_x->data, 1);
+	//image_show(soble_x, 0.4, "soble_x");
+
+	f_screem<float>* filter_y = set_f<float>(sf_mode::sobel_y_N);
+	Mat soble_y = space_filter_gpu<float, float>("", image, filter_y->len, filter_y->postion, filter_y->data, 1);
+	//image_show(soble_y, 0.4, "soble_y");
+
+	//计算梯度幅度
+	soble_x.convertTo(soble_x, CV_32F);
+	soble_y.convertTo(soble_y, CV_32F);
+
+	Mat M_xy;
+	if(mode == 0)//
+	sqrt(soble_x.mul(soble_x) + soble_y.mul(soble_y), M_xy);
+	if(mode == 1)//
+	M_xy=abs(soble_x) + abs(soble_y);
+	return M_xy.clone();
+}
+
+float Max_ofmat(Mat& H) {
+	double max, min;
+	cv::Point min_loc, max_loc;
+	cv::minMaxLoc(H, &min, &max, &min_loc, &max_loc);
+	return max;
+}
 
 void LoG_test()
 {

@@ -63,7 +63,7 @@ void Histogram(Mat& image) {
 		hist,//作为结果的直方图
 		1,//这时一维的直方图
 		histSize,//箱子数量
-		ranges//像素值的范围
+		ranges//像素值的范围-
 	    );
 	hist.copyTo(image);
 }
@@ -72,6 +72,7 @@ void Histogram(Mat& image) {
 //来源网上帖子:https://blog.csdn.net/qq_30241709/article/details/78539644
 cv::Mat getImageofHistogram(const cv::Mat &hist, int zoom)
 {
+	hist.convertTo(hist, CV_32F);
 	double maxVal = 0;
 	double minVal = 0;
 	cv::minMaxLoc(hist, &minVal, &maxVal, 0, 0);
