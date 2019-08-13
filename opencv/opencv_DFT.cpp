@@ -782,6 +782,21 @@ void image_show(const Mat& image,float rato,const char * c) {
 }
 
 
+void image_show(const Mat& image, float rows,float cols, const char * c) {
+	Mat a = image.clone();
+	a.convertTo(a, CV_32F);
+	int row = a.rows*rows;
+	int col = a.cols*cols;
+	resize(a, a, Size(col, row));
+	normalize(a, a, 1, 0, NORM_MINMAX);
+	//demarcate(dft_lena_filter_space);
+	stringstream ss;
+	ss << c;
+	string mark;
+	ss >> mark;
+	imshow(mark, a);
+}
+
 //显示频率滤波器在空间中的图像
 void fre2space_show(char * namefilter) 
 {

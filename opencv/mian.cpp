@@ -134,13 +134,14 @@ int main()
 {chapter10_test();
  //chapter10_test();
  //charter7();
-  //morphology_test(12,10,1);
-  //morphology_test(4, 4,1);
+ //morphology_test(12,10,1);
+ //morphology_test(4, 4,1);
  //morphology_test(15, 15,1);
  //chapter10();
  //LoG_test();
  //canny_test();
- Partial_treatment();
+ //Partial_treatment();
+ chapter10();
  waitKey(0);
 }
 

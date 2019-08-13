@@ -12,7 +12,11 @@
 #include <curand.h>
 #include "cufft.h"
 #include "opencv_DFT.h"
+#include <typeinfo>
 #include "opencv_chapter9.cuh"
+#include <time.h>
+#include "spacefilter_gpu.cuh"
 
 using namespace std;
 using namespace cv;
+void chapter10();
