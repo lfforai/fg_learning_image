@@ -400,6 +400,20 @@ void Thresholding_test() {
 
 }
 
+float find_Target(Mat& image_N,float rato){
+	Mat image = image_N.clone();
+	Histogram(image);
+	Scalar ss;
+	ss=sum(image);
+	for(size_t i = 0; i < 256; i++)
+	  {
+		image.at<float>(i,0)=image.at<float>(i, 0)/ss[0];
+	  }
+	cout<<image<<endl;
+	ss=sum(image);
+	return ss[0];
+}
+
 //可以按自己构建的概率函数
 Mat Otsu(Mat& image,Mat& probability_N) {
 	
@@ -525,9 +539,9 @@ Mat Otsu(Mat& image,Mat& probability_N) {
 	//局部方差
 	auto var_B = []( float p1, float p2,float mg,float m1 ,float m2, float mk)->float
 	{float result;
-	 //result = p1 * pow(m1 - mg, .0) + p2 * pow(m2 - mg, 2.0);
+	 //result = p1 * pow(m1 - mg, 2.0) + p2 * pow(m2 - mg, 2.0);
 	 //result = p1*p2*pow((m1-m2),2.0);
-	 result = pow(mg*p1 - mk, 2.0) / (p1*(1 - p1));
+	 result = pow(mg*p1 - mk, 2.0)/ (p1*(1 - p1));
 	 return result;
 	};
 
@@ -612,6 +626,7 @@ void chapter10()
 
 	//f_screem<float>* filter_G = set_f<float>(sf_mode::avg_5);
 	//Mat avg_mat = space_filter_gpu<float, float>("", Lena, filter_G->len, filter_G->postion, filter_G->data, 1);
+	//image_show(avg_mat, 1, "5*5滤波后图");
 	//avg_mat.convertTo(avg_mat, CV_8U);
 	//show_His(avg_mat, "5*5滤波后-直方图");
 	//pro;
@@ -649,15 +664,14 @@ void chapter10()
 	//2)用拉普拉斯寻找边界 	Laplace8_N = 6,
 	Mat lena = imread("c:/users/administrator/desktop/opencv/fig1043a.tif");//无效果图
 	cvtColor(lena, lena, COLOR_BGR2GRAY);//转换为灰度图
+	Mat lena_o = lena.clone();
+	image_show(lena, 1, "原图");
+	show_His(lena, "乘积前-直方图", 0);
 
 	Mat pro;
 	Mat Lena_show=Otsu(lena,pro);
 	image_show(Lena_show, 1, "直接otsu原图");
 
-	Mat lena_o=lena.clone();
-	image_show(lena, 1, "原图");
-	show_His(lena,"乘积前-直方图",0);
-	 
 	//拉普拉斯
 	f_screem<float>* filter_G = set_f<float>(sf_mode::Laplace8_N);
 	Mat laplace_mat = space_filter_gpu<float, float>("", lena, filter_G->len, filter_G->postion, filter_G->data, 1);
@@ -665,17 +679,18 @@ void chapter10()
 	laplace_mat.convertTo(laplace_mat, CV_8U);
 	image_show(laplace_mat, 1, "拉普拉斯");
 	
+	//cout <<find_Target(laplace_mat, 0.5)<<endl;;
+
 	//99.7%的梯度值
-    float max_n=(float)Max_ofmat(lena);
-	//cout<< max_n * 0.997 <<endl;
-	//cout <<(int)(max_n * 0.997) << endl;
-	threshold(laplace_mat, laplace_mat,(int)(max_n*0.08),1, 0);
+    float max_n=(float)Max_ofmat(laplace_mat);
+	cout<<"max_n"<<max_n<<endl;
+	threshold(laplace_mat, laplace_mat,(max_n*0.60),1, 0);
 	image_show(laplace_mat, 1, "阕值处理以后的拉普拉斯");
 
 	lena =lena.mul(laplace_mat);
 	image_show(lena, 1, "乘积后图");
 	show_His(lena, "乘积后-直方图", 1);
-
+	
 	Histogram(lena);
 	lena.at<float>(0, 0) = 0;
 	lena_o =Otsu(lena_o, lena);

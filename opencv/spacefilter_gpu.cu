@@ -67,7 +67,7 @@ f_screem<datatype>* set_f(sf_mode mode) {
 		cudaMemcpy(filter->data, src, sizeof(datatype)*N*M, cudaMemcpyDefault);
 	}
 
-
+	
 	if (mode == 7)
 	{
 		int var = 4;
