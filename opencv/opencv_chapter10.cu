@@ -400,18 +400,33 @@ void Thresholding_test() {
 
 }
 
-float find_Target(Mat& image_N,float rato){
+//找寻rato处的阕值
+int find_Target(Mat& image_N,float rato){
 	Mat image = image_N.clone();
 	Histogram(image);
 	Scalar ss;
 	ss=sum(image);
+
 	for(size_t i = 0; i < 256; i++)
 	  {
 		image.at<float>(i,0)=image.at<float>(i, 0)/ss[0];
 	  }
-	cout<<image<<endl;
-	ss=sum(image);
-	return ss[0];
+
+	int result;
+	float sum = 0;
+	for (size_t i = 0; i < 256; i++)
+	{
+		if (sum < rato)
+		{
+			sum = sum + image.at<float>(i, 0);
+		}
+		else
+		{
+			result = i;
+			break;
+		}
+	}
+	return result;
 }
 
 //可以按自己构建的概率函数
@@ -429,7 +444,7 @@ Mat Otsu(Mat& image,Mat& probability_N) {
 		Scalar ss;
 		ss = sum(probability);
 		probability = probability / ss[0];
-		cout<< sum(probability)[0] <<endl;
+		//cout<< sum(probability)[0] <<endl;
 	}
 	else {
 		probability = probability_N.clone();
@@ -437,7 +452,7 @@ Mat Otsu(Mat& image,Mat& probability_N) {
 		Scalar ss;
 		ss = sum(probability);
 		probability = probability / ss[0];
-		cout << sum(probability)[0] << endl;
+		//cout << sum(probability)[0] << endl;
 	}
 	//选择一个K值
 
@@ -596,6 +611,171 @@ Mat Otsu(Mat& image,Mat& probability_N) {
 	return  Lena_N.clone();
 }
 
+
+Mat Otsu_two(Mat& image, Mat& probability_N) {
+
+	//计算归一化直方图
+	Mat Lena = image.clone();
+	Mat Lena_N = Lena.clone();
+	Histogram(Lena);//row=255
+
+	//计算概率
+	Mat probability;
+	if (probability_N.empty()) {
+		Lena.convertTo(probability, CV_32F);
+		Scalar ss;
+		ss = sum(probability);
+		probability = probability / ss[0];
+		//cout<<"lena:" <<sum(probability)[0] <<endl;
+	}
+	else {
+		probability = probability_N.clone();
+		probability.convertTo(probability, CV_32F);
+		Scalar ss;
+		ss = sum(probability);
+		probability = probability / ss[0];
+		//cout <<"probability_N"<<sum(probability)[0] << endl;
+	}
+	//选择一个K值
+
+	//计算平均灰度
+	//m1(k)条件像素均值
+	auto mk_avg = [](Mat hist_pro, int k1,int k2)->float
+	{Mat hist = hist_pro.clone();
+	hist.convertTo(hist, CV_32F);
+
+	float sum = 0;
+	float result = 0;
+	for (int i = k1; i < k2; i++)
+	{
+		result = result + (float)(i)*hist.at<float>(i, 0);
+		sum = hist.at<float>(i, 0) + sum;
+	}
+	result = result / sum;
+	return result;
+	};
+
+	//Pk累计概率
+	auto p_sum = [](Mat hist_pro, int k1,int k2)->float
+	{int M = 256;
+	Mat hist = hist_pro.clone();
+	hist.convertTo(hist, CV_32F);
+
+	float result = 0;
+	for (int i = k1; i < k2; i++)
+	{
+		result = result + hist.at<float>(i, 0);
+	}
+	return result;
+	};
+
+	//全局像素平均值
+	auto mG_avg = [](Mat hist_pro)->float
+	{int M = 256;
+	 Mat hist = hist_pro.clone();
+	 hist.convertTo(hist, CV_32F);
+
+	 float result = 0;
+	 for (int i = 0; i < M; i++)
+	  {
+		result = result + (float)(i)*hist.at<float>(i, 0);
+	  }
+	  return result;
+	 };
+
+	//局部方差
+	auto var_B = [](float p1, float p2, float p3,float mg, float m1, float m2, float m3)->float
+	{float result;
+	 result = p1 * pow(m1 - mg, 2.0) + p2 * pow(m2 - mg, 2.0)+p3*pow(m3-mg,2.0);
+	 return result;
+	 };
+
+	//计算最大的局部方差
+	float max_var = 0;
+	int K1 = 0;
+	int K2 = 0;
+	float mg = mG_avg(probability);
+	for(int k1 = 0;k1 < 256; k1++)
+	{
+	  for(int k2 = 0; k2 < 256; k2++)//计算最大方差
+		{      
+			if (k1<k2) 
+			{   //023-63855237
+				float p1=p_sum(probability, 0, k1);
+				float p2=p_sum(probability, k1, k2);
+				float p3=p_sum(probability, k2, 256);
+				float m1 = mk_avg(probability,0,k1);
+				float m2 = mk_avg(probability, k1, k2);
+				float m3 = mk_avg(probability, k2, 256);
+			
+				float v_B = var_B(p1,p2,p3,mg,m1,m2,m3);
+				if(v_B > max_var)
+				  {
+					max_var = v_B;
+					K1 = k1;
+					K2 = k2;
+					cout <<p1+p2+p3<<"|"<<v_B << "|" << k1 << "|" << k2 << endl;
+				  }
+			}
+			
+		}
+	}
+
+	//cout << "阕值k1：" << (int)K1 << endl;
+	//cout << "阕值k2：" << (int)K2 << endl;
+
+	int K_sum1 = 0;
+	int K_sum2 = 0;
+	int count = 0;
+	for (int k1 = 0; k1 < 256; k1++)
+	{
+		for (int k2 = 0; k2 < 256; k2++)//计算最大方差
+		{
+			if (k1 < k2)
+			{
+				float p1 = p_sum(probability, 0, k1);
+				float p2 = p_sum(probability, k1, k2);
+				float p3 = p_sum(probability, k2, 256);
+				float m1 = mk_avg(probability, 0, k1);
+				float m2 = mk_avg(probability, k1, k2);
+				float m3 = mk_avg(probability, k2, 256);
+
+				float v_B = var_B(p1, p2, p3, mg, m1, m2, m3);
+				if (v_B == max_var)
+				{
+					K_sum1 += k1;
+					K_sum2 += k2;
+					count += 1;
+				}
+			}
+			//cout<<v_B <<"|"<<k<<endl;
+		}
+	}
+
+	//cout<<"最大值"<<max_var <<endl;
+	//如果有n个最大值，计算平均K
+	cout << "阕值k1：" << (int)(K_sum1 / count) << endl;
+	cout << "阕值k2：" << (int)(K_sum2 / count) << endl;
+
+	K1 = (int)(K_sum1 / count);
+	K2 = (int)(K_sum2 / count);
+
+	int N = Lena_N.cols;
+	int M = Lena_N.rows;
+	for (size_t i = 0; i <M; i++)
+		  {  for (size_t j = 0; j <N; j++)
+			   { 
+			    if(Lena_N.at<uchar>(i, j)<=K1)
+			       Lena_N.at<uchar>(i, j)=0;
+				if(Lena_N.at<uchar>(i, j) >K1 && Lena_N.at<uchar>(i, j)<=K2)
+				   Lena_N.at<uchar>(i, j) = 155;
+				if(Lena_N.at<uchar>(i, j) >K2)
+				   Lena_N.at<uchar>(i, j) = 255;
+			   }
+		  }
+	return  Lena_N.clone();
+}
+
 void chapter10()
 {
 	//1、Hough_test();
@@ -644,11 +824,8 @@ void chapter10()
 	//lena=sobel_grad(lena,1);
 	//lena.convertTo(lena, CV_8U);
 	//
-	////99.7%的梯度值
-	//float max_n=(float)Max_ofmat(lena);
-	//cout<< max_n * 0.997 <<endl;
-	//cout <<(int)(max_n * 0.997) << endl;
-	//threshold(lena,lena,(int)(max_n*0.999),1, 0);
+	//cout<<"提取阕值"<<find_Target(lena, 0.997) <<endl;
+ //   threshold(lena, lena, find_Target(lena, 0.997), 1, 0);
 	//image_show(lena, 1, "梯度图");
 
 	//lena_o=lena.mul(lena_o);
@@ -662,37 +839,47 @@ void chapter10()
 
 	//
 	//2)用拉普拉斯寻找边界 	Laplace8_N = 6,
-	Mat lena = imread("c:/users/administrator/desktop/opencv/fig1043a.tif");//无效果图
+	//Mat lena = imread("c:/users/administrator/desktop/opencv/fig1043a.tif");//无效果图
+	//cvtColor(lena, lena, COLOR_BGR2GRAY);//转换为灰度图
+	//Mat lena_o = lena.clone();
+	//image_show(lena, 1, "原图");
+	//show_His(lena, "乘积前-直方图", 0);
+
+	//Mat pro;
+	//Mat Lena_show=Otsu(lena,pro);
+	//image_show(Lena_show, 1, "直接otsu原图");
+
+	//////拉普拉斯
+	//f_screem<float>* filter_G = set_f<float>(sf_mode::Laplace8_N);
+	//Mat laplace_mat = space_filter_gpu<float, float>("", lena, filter_G->len, filter_G->postion, filter_G->data, 1);
+	//laplace_mat = abs(laplace_mat);
+	//laplace_mat.convertTo(laplace_mat, CV_8U);
+	//image_show(laplace_mat, 1, "拉普拉斯");
+	//
+	////99.7%的梯度值
+	//cout<<"拉普莱斯梯度阕值:"<<find_Target(laplace_mat,0.995)<<endl;
+
+	//threshold(laplace_mat, laplace_mat, find_Target(laplace_mat, 0.995),1, 0);
+	//image_show(laplace_mat, 1, "阕值处理以后的拉普拉斯");
+
+	//lena =lena.mul(laplace_mat);
+	//image_show(lena, 1, "乘积后图");
+	//show_His(lena, "乘积后-直方图", 1);
+	//
+	//Histogram(lena);
+	//lena.at<float>(0, 0) = 0;
+	//lena_o =Otsu(lena_o, lena);
+	//image_show(lena_o, 1, "结果图");
+
+	//6、多阕值处理
+	Mat lena = imread("c:/users/administrator/desktop/opencv/Fig1045a.tif");//无效果图
 	cvtColor(lena, lena, COLOR_BGR2GRAY);//转换为灰度图
 	Mat lena_o = lena.clone();
 	image_show(lena, 1, "原图");
 	show_His(lena, "乘积前-直方图", 0);
 
 	Mat pro;
-	Mat Lena_show=Otsu(lena,pro);
-	image_show(Lena_show, 1, "直接otsu原图");
-
-	//拉普拉斯
-	f_screem<float>* filter_G = set_f<float>(sf_mode::Laplace8_N);
-	Mat laplace_mat = space_filter_gpu<float, float>("", lena, filter_G->len, filter_G->postion, filter_G->data, 1);
-	laplace_mat = abs(laplace_mat);
-	laplace_mat.convertTo(laplace_mat, CV_8U);
-	image_show(laplace_mat, 1, "拉普拉斯");
+    Mat image_two=Otsu_two(lena, pro);
+    image_show(image_two, 1, "2阕值otsu图");
 	
-	//cout <<find_Target(laplace_mat, 0.5)<<endl;;
-
-	//99.7%的梯度值
-    float max_n=(float)Max_ofmat(laplace_mat);
-	cout<<"max_n"<<max_n<<endl;
-	threshold(laplace_mat, laplace_mat,(max_n*0.60),1, 0);
-	image_show(laplace_mat, 1, "阕值处理以后的拉普拉斯");
-
-	lena =lena.mul(laplace_mat);
-	image_show(lena, 1, "乘积后图");
-	show_His(lena, "乘积后-直方图", 1);
-	
-	Histogram(lena);
-	lena.at<float>(0, 0) = 0;
-	lena_o =Otsu(lena_o, lena);
-	image_show(lena_o, 1, "结果图");
 }
