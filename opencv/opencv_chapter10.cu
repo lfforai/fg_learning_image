@@ -714,7 +714,7 @@ Mat Otsu_two(Mat& image, Mat& probability_N) {
 					max_var = v_B;
 					K1 = k1;
 					K2 = k2;
-					cout <<p1+p2+p3<<"|"<<v_B << "|" << k1 << "|" << k2 << endl;
+					//cout <<p1+p2+p3<<"|"<<v_B << "|" << k1 << "|" << k2 << endl;
 				  }
 			}
 			
@@ -881,5 +881,6 @@ void chapter10()
 	Mat pro;
     Mat image_two=Otsu_two(lena, pro);
     image_show(image_two, 1, "2阕值otsu图");
-	
+	//7、可变阕值处理
+   
 }

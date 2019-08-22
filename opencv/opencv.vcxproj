@@ -42,20 +42,21 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>C:\ProgramData\NVIDIA Corporation\CUDA Samples\v10.0\common\inc;C:\opencv\include;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\ProgramData\NVIDIA Corporation\CUDA Samples\v10.0\common\lib\x64;C:\opencv\x64\vc15\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>C:\ProgramData\Anaconda3\include;C:\ProgramData\NVIDIA Corporation\CUDA Samples\v10.0\common\inc;C:\opencv\include;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\ProgramData\Anaconda3\libs;C:\ProgramData\NVIDIA Corporation\CUDA Samples\v10.0\common\lib\x64;C:\opencv\x64\vc15\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;WIN64;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>C:\ProgramData\Anaconda3\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
-      <AdditionalDependencies>cufft.lib;opencv_world410d.lib;cudart.lib;cudart_static.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>C:\opencv\x64\vc15\dll_and_lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>python37_d.lib;python37.lib;cufft.lib;opencv_world410d.lib;cudart.lib;cudart_static.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>C:\ProgramData\Anaconda3\libs;C:\opencv\x64\vc15\dll_and_lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
@@ -81,6 +82,7 @@
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <CudaCompile Include="c++_feature_test.cu" />
     <CudaCompile Include="cufft.cu" />
     <CudaCompile Include="image_rotate.cu" />
     <CudaCompile Include="image_scale0.cu" />
@@ -89,6 +91,7 @@
     <CudaCompile Include="opencv_chapter10.cu" />
     <CudaCompile Include="opencv_chapter9.cu" />
     <CudaCompile Include="spacefilter_gpu.cu" />
+    <CudaCompile Include="wavelet.cu" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="..\..\..\..\Desktop\I.png" />
@@ -117,6 +120,8 @@
     <Image Include="shell.png" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="c++_feature_test.cuh" />
+    <ClInclude Include="Class_test.h" />
     <ClInclude Include="cudatool.cuh" />
     <ClInclude Include="cufft.cuh" />
     <ClInclude Include="image_rotate.cuh" />
@@ -129,8 +134,10 @@
     <ClInclude Include="opencv_DFT.h" />
     <ClInclude Include="opencv_DWT.h" />
     <ClInclude Include="spacefilter_gpu.cuh" />
+    <ClInclude Include="wavelet.cuh" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Class_test.cpp" />
     <ClCompile Include="cudatool.cu" />
     <ClCompile Include="math_cuda.cu" />
     <ClCompile Include="mian.cpp" />

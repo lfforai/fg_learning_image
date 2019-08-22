@@ -8,6 +8,9 @@
 #include "opencv_chapter9.cuh"
 #include "opencv_chapter10.cuh"
 #include "spacefilter_gpu.cuh"
+#include "wavelet.cuh"
+#include "Class_test.h"
+#include "c++_feature_test.cuh"
 
 
 //系统包
@@ -130,8 +133,9 @@ void charter7() {
 void charter9() {
 }
 
+
 int main()
-{chapter10_test();
+{//chapter10_test();
  //chapter10_test();
  //charter7();
  //morphology_test(12,10,1);
@@ -141,7 +145,9 @@ int main()
  //LoG_test();
  //canny_test();
  //Partial_treatment();
- chapter10();
+ //chapter10();
+ //wavelet_test();
+ test_feature();
  waitKey(0);
 }
 

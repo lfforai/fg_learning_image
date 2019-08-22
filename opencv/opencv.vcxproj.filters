@@ -96,15 +96,21 @@
     <Filter Include="python">
       <UniqueIdentifier>{15f3ac72-39d7-4328-ade4-c337998c99bd}</UniqueIdentifier>
     </Filter>
+    <Filter Include="wavelet">
+      <UniqueIdentifier>{cd4e7084-3f07-4aea-b5ad-5a5584b17a6d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="tensorflow">
+      <UniqueIdentifier>{fe7017bc-c0e1-404c-b23e-3bb9ca515964}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="c++_cuda">
+      <UniqueIdentifier>{5d14feee-cb25-45b3-921d-4b7ba388aa70}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="cufft.cu">
       <Filter>cufft</Filter>
     </CudaCompile>
     <CudaCompile Include="image_scale0.cu">
-      <Filter>image_scale</Filter>
-    </CudaCompile>
-    <CudaCompile Include="image_scale1.cu">
       <Filter>image_scale</Filter>
     </CudaCompile>
     <CudaCompile Include="image_scale2.cu">
@@ -121,6 +127,15 @@
     </CudaCompile>
     <CudaCompile Include="opencv_chapter10.cu">
       <Filter>opencv</Filter>
+    </CudaCompile>
+    <CudaCompile Include="wavelet.cu">
+      <Filter>wavelet</Filter>
+    </CudaCompile>
+    <CudaCompile Include="image_scale1.cu">
+      <Filter>image_scale</Filter>
+    </CudaCompile>
+    <CudaCompile Include="c++_feature_test.cu">
+      <Filter>c++_cuda</Filter>
     </CudaCompile>
   </ItemGroup>
   <ItemGroup>
@@ -160,6 +175,15 @@
     <ClInclude Include="opencv_chapter10.cuh">
       <Filter>opencv</Filter>
     </ClInclude>
+    <ClInclude Include="wavelet.cuh">
+      <Filter>wavelet</Filter>
+    </ClInclude>
+    <ClInclude Include="Class_test.h">
+      <Filter>tensorflow</Filter>
+    </ClInclude>
+    <ClInclude Include="c++_feature_test.cuh">
+      <Filter>c++_cuda</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="mian.cpp" />
@@ -180,6 +204,9 @@
     </ClCompile>
     <ClCompile Include="opencv_chapter4.cpp">
       <Filter>opencv</Filter>
+    </ClCompile>
+    <ClCompile Include="Class_test.cpp">
+      <Filter>tensorflow</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
