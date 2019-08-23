@@ -27,6 +27,7 @@ f_screem<datatype>* set_f(sf_mode mode) {
 		int N = 3;
 		filter->init(M, N);
 		datatype src[9] = { -1,0,1,-2,0,2,-1,0,1 };
+		//datatype src[9] = { -1,0,1,-1,0,1,-1,0,1 };
 		cudaMemcpy(filter->data, src, sizeof(datatype)*N*M, cudaMemcpyDefault);
 	}
 
@@ -37,6 +38,7 @@ f_screem<datatype>* set_f(sf_mode mode) {
 		int N = 3;
 		filter->init(M, N);
 		datatype src[9] = { -1,-2,-1,0,0,0,1,2,1 };
+		//datatype src[9] = { -1,-1,-1,0,0,0,1,1,1 };
 		cudaMemcpy(filter->data, src, sizeof(datatype)*N*M, cudaMemcpyDefault);
 	}
 

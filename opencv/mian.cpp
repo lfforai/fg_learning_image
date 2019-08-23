@@ -145,9 +145,9 @@ int main()
  //LoG_test();
  //canny_test();
  //Partial_treatment();
- //chapter10();
+ chapter10();
  //wavelet_test();
- test_feature();
+ //test_feature();
  waitKey(0);
 }
 

@@ -151,5 +151,6 @@ int test_feature()
 
 	BinaryBitset(-32);
 	BinaryBitset(-1);
+
 	return 0;
 }
